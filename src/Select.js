@@ -84,13 +84,13 @@ gx.bootstrap.Select = new Class({
 			if (this.options.textFormat == null)
 				this.options.textFormat = this.options.listFormat;
 
-			this._display.root.addClass('bs-select input-prepend');
+			this._display.root.addClass('bs-select input-group');
 			this._display.textbox = new Element('input', {
 				'type'  : 'text',
-				'class' : 'left',
+				'class' : 'left form-control',
 				'styles': {'width': this.options.width}
 			});
-			var iconMarkup = ( this.options.icon ? '<i class="icon-'+this.options.icon+'"></i>' : '' );
+			var iconMarkup = ( this.options.icon ? '<span class="glyphicon glyphicon-'+this.options.icon+'"></span>&nbsp;' : '' );
 
 			this._display.symbol = new Element('span')
 				.addEvent('click', function (event) {
@@ -108,7 +108,7 @@ gx.bootstrap.Select = new Class({
 				this._display.symbol.set('html', iconMarkup+( this.options.label ? ' '+this.options.label : '' ))
 			}
 
-			this._display.symbol.addClass('add-on');
+			this._display.symbol.addClass('input-group-addon');
 
 			this._display.navbar = new Element('div', {'class': 'navbar', 'styles': {'position': 'absolute'}});
 			this._display.dropdown = new Element('div', {'class': 'dropdown'});

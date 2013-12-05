@@ -116,7 +116,9 @@ gx.bootstrap.Popup = new Class({
 				this._display.body.adopt(__(this.options.content));
 
 			// Set the footer
-			if (this.options.footer)
+			if (typeOf(this.options.footer) == 'array')
+				this._display.footer.adopt(this.options.footer);
+			else
 				this._display.footer.adopt(__(this.options.footer));
 
 			// Set the title
@@ -161,6 +163,7 @@ gx.bootstrap.Popup = new Class({
 				case 'element':
 				case 'elements':
 				case 'textnode':
+				case 'array':
 					this._display.body.adopt(content);
 					break;
 				case 'object':
