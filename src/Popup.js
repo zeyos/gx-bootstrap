@@ -39,12 +39,13 @@ gx.bootstrap.PopupMeta = new (function() {
 
 	this.unregister = function(popup) {
 		this.popups.erase(popup);
+		return this.popups.length;
 	}
 
-	window.addEvent('keypress', function(e) {
-		if (e.key == 'esc') {
-			var popup = this.popups.pop();
-			if (popup != null)
+	$(document.body).addEvent('keyup', function(event) {
+		if (event.key == 'esc') {
+			var popup = this.popups.getLast();
+			if (popup != null && popup.options.closable)
 				popup.hide();
 		}
 	}.bind(this));
@@ -52,31 +53,30 @@ gx.bootstrap.PopupMeta = new (function() {
 
 gx.bootstrap.Popup = new Class({
 	gx: 'gx.bootstrap.Popup',
-	Extends: gx.ui.Blend,
+	Extends: gx.core.Settings,
 	options: {
-		'color': '#000',
+		'color'      : '#000',
 		'freezeColor': '#000',
-		'opacity': '0.40',
-		'z-index': 110,
-		'position': 'fixed',
-		'transition': 'quad:in',
-		'duration': '300',
-		'loader': false,
-		'open': false,
-		'content': null,
-		'x': 'center',
-		'y': 'center',
-		'width': 600,
-		'closable': true,
-		'borderbox': true,
-		'maxHeight': 'auto',
-		'minHeight': 'auto'
+		'opacity'    : '0.40',
+		'position'   : 'fixed',
+		'transition' : 'quad:in',
+		'duration'   : '300',
+		'loader'     : false,
+		'open'       : false,
+		'content'    : null,
+		'x'          : 'center',
+		'y'          : 'center',
+		'closable'   : true,
+		'borderbox'  : true,
+		'maxHeight'  : 'auto',
+		'minHeight'  : 'auto',
+		'clickable'  : false
 	},
 	isOpen: false,
 	initialize: function(options) {
 		var root = this;
 		try {
-			this.parent($(document.body), options);
+			this.parent(options);
 
 			this.build();
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->initialize: ', e.message); }
@@ -89,79 +89,49 @@ gx.bootstrap.Popup = new Class({
 	build: function() {
 		var root = this;
 		try {
-			this._display = Object.merge(this._display, {
-				'modal': new Element('div', {
-					'cellspacing': 0,
-					'cellpadding': 0,
-					'border': 0,
-					'dir': 'ltr',
-					'class': 'modal',
-					'styles': {
-						'width': (root.options.width + 42)+'px',
-						'z-index': this.options['z-index'],
-						'opacity': 0
-					}
-				}),
-				'footer': new Element('div', {'class': 'modal-footer'}),
-				'content': new Element('div', {'class': 'modal-body'})
-			});
+			this._display = {
+				'domBody' : $(document.body),
+				'backdrop': new Element('div', {'class': 'modal-backdrop fade'}),
+				'modal'   : new Element('div', {'class': 'modal fade'}),
+				'dialog'  : new Element('div', {'class': 'modal-dialog'}),
+				'content' : new Element('div', {'class': 'modal-content'}),
+				'header'  : new Element('div', {'class': 'modal-header'}),
+				'footer'  : new Element('div', {'class': 'modal-footer'}),
+				'body'    : new Element('div', {'class': 'modal-body'}),
+				'cross'   : new Element('button', {'class': 'close', 'html': '&times;'}),
+				'title'   : new Element('h4', {'class': 'modal-title', 'html': this.options.title})
+			};
+			this._display.domBody.adopt(this._display.modal);
+			this._display.modal.adopt(this._display.dialog);
+			this._display.dialog.adopt(this._display.content);
+			this._display.content.adopt([this._display.header, this._display.body, this._display.footer]);
+			this._display.header.adopt([this._display.cross, this._display.title]);
 
-			if (this.options.title) {
-				this._display.header = new Element('div', {'class': 'modal-header'});
-				this._display.title = new Element('h3', {'html': this.options.title})
-				this._display.header.adopt(this._display.title);
-				this._display.modal.adopt(this._display.header);
-			}
+			// Adjust the default width (600px)
+			if (this.options['width'])
+				this._display.dialog.setStyle('width', this.options['width']);
 
+			// Adopt the content
 			if (this.options.content)
-				this._display.content.adopt(this.options.content);
+				this._display.body.adopt(__(this.options.content));
 
-			this._display.modal.adopt(this._display.content);
+			// Set the footer
+			if (typeOf(this.options.footer) == 'array')
+				this._display.footer.adopt(this.options.footer);
+			else
+				this._display.footer.adopt(__(this.options.footer));
 
-			if (this.options.footer) {
-				this._display.footer = new Element('div', {'class': 'modal-footer'});
-				this._display.modal.adopt(this._display.footer.adopt(this.options.footer));
-			}
+			// Set the title
+			this.setTitle(this.options.title);
 
-			if (this.options.content)
-				this.setContent(this.options.content);
-
-			this._display.modal.inject(this._display.root);
-
+			// Add the closing functions
 			if (this.options.closable) {
-				this._display.blend.addEvent('click', function() {
-					root.hide();
-				});
+				this._display.cross.addEvent('click', function() { root.hide(); });
 
-				var closeX = new Element('a', {'class': 'close', 'html': '×'})
-				closeX.addEvent('click', function() {
-					root.hide();
-				});
-				this._display.modal.adopt(closeX);
-			}
-
-			this._parent.addEvent('resize', function() {
-				root.setPosition();
-			});
-
-			this._display.modal.setStyle('display', 'none');
-
-			if ( this.options.minHeight )
-				this._display.content.setStyle('minHeight', this.options.minHeight);
-
-
-			if ( typeOf(this.options.maxHeight) == 'number' )
-				root.setMaxHeight(this.options.maxHeight);
-
-			else if ( this.options.maxHeight == 'auto' ) {
-				window.addEvent('resize', function() {
-					if ( !root.isOpen )
-						return;
-
-					root.setMaxHeight();
-				});
-
-				root.setMaxHeight();
+				if (this.options['clickable'])
+					this._display.backdrop.addEvent('click', function() { root.hide(); });
+			} else {
+				this._display.cross.destroy();
 			}
 
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->build', e.message); }
@@ -173,6 +143,11 @@ gx.bootstrap.Popup = new Class({
 	 * @param {string} title The title to set
 	 */
 	setTitle: function(title) {
+		if (!title) {
+			this._display.header.setStyle('display', 'none');
+			return;
+		}
+		this._display.header.erase('style');
 		this._display.title.set('html', title);
 	},
 
@@ -183,80 +158,31 @@ gx.bootstrap.Popup = new Class({
 	 */
 	setContent: function(content) {
 		try {
-			this._display.content.empty();
+			this._display.body.empty();
 			switch (typeOf(content)) {
 				case 'element':
 				case 'elements':
 				case 'textnode':
-					this._display.content.adopt(content);
+				case 'array':
+					this._display.body.adopt(content);
 					break;
 				case 'object':
-					this._display.content.adopt(__(content));
+					this._display.body.adopt(__(content));
 					break;
 				case 'string':
 				case 'number':
-					this._display.content.set('html', content);
+					this._display.body.set('html', content);
 					break;
 			}
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->initialize', e.message); }
 	},
 
-	getContent: function() {
-		return this._display.content;
-	},
-
-	setMaxHeight: function(height, adjust) {
-
-		if ( !height ) {
-			height = window.getSize().y;
-
-			if ( adjust )
-				height -= adjust;
-
-			if ( this._display.footer )
-				height -= this._display.footer.getSize().y;
-
-			if ( this._display.header )
-				height -= this._display.header.getSize().y;
-		}
-
-		this._display.content.setStyle('maxHeight', height);
-	},
-
 	/**
-	 * @method setPosition
-	 * @description Sets the popup position
-	 * @param {string} x Horizontal position (left, right, center)
-	 * @param {string} y Vertical position (top, bottom, center)
+	 * Returns the body element
+	 * @return {Element}
 	 */
-	setPosition: function(x, y) {
-		var root = this;
-		if (this.options.borderbox == false)
-			return;
-		try {
-			if (x == null) x = this.options.x;
-			if (y == null) y = this.options.y;
-			this.getCoordinates();
-			var coordinates = this._display.modal.getCoordinates();
-
-			if (x == 'left')
-				this._display.modal.setStyle('left', 0);
-			else if (x == 'right')
-				this._display.modal.setStyle('left', this._coordinates.width - coordinates.width);
-			else if (x == 'center')
-				this._display.modal.setStyle('left', (this._coordinates.width - coordinates.width)/2);
-			else
-				this._display.modal.setStyle('left', x);
-
-			if (y == 'top')
-				this._display.modal.setStyle('top', 0);
-			else if (y == 'bottom')
-				this._display.modal.setStyle('top', this._coordinates.height - coordinates.height);
-			else if (y == 'center')
-				this._display.modal.setStyle('top', (this._coordinates.height - coordinates.height)/2);
-			else
-				this._display.modal.setStyle('top', y);
-		} catch(e) { gx.util.Console('gx.bootstrap.Popup->setPosition: ', e.message); }
+	getContent: function() {
+		return this._display.body;
 	},
 
 	/**
@@ -268,20 +194,18 @@ gx.bootstrap.Popup = new Class({
 		try {
 			var zindex = gx.bootstrap.PopupMeta.register(this);
 			this._display.modal.setStyle('z-index', zindex);
-			this._display.blend.setStyle('z-index', zindex-1);
+			this._display.backdrop.setStyle('z-index', zindex-1);
 
-			var morph = new Fx.Morph(this._display.modal, {
-				'onStart': function() {
-					root._display.modal.setStyle('display', 'block');
-				}
-			});
-			this.lock(1);
-			morph.start({
-				'opacity': 1
-			});
-			this.setPosition();
+			this._display.domBody.adopt(this._display.backdrop);
+			this._display.modal.setStyle('display', 'block');
+			(function() {
+				root._display.backdrop.addClass('in');
+				root._display.modal.addClass('in');
+				root._display.domBody.addClass('modal-open');
+			}).delay(100);
+
 			this.isOpen = true;
-			this.fireEvent('show', [options]);
+			this.fireEvent('open');
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->show: ', e.message); }
 	},
 
@@ -292,41 +216,17 @@ gx.bootstrap.Popup = new Class({
 	hide: function() {
 		var root = this;
 		try {
-			gx.bootstrap.PopupMeta.unregister(this)
+			this._display.backdrop.removeClass('in');
+			this._display.modal.removeClass('in');
+			(function() {
+				root._display.modal.setStyle('display', 'none');
+				root._display.backdrop.dispose();
+				if (gx.bootstrap.PopupMeta.unregister(root) == 0)
+					root._display.domBody.removeClass('modal-open');
+			}).delay(100);
 
-			var morph = new Fx.Morph(this._display.modal, {
-				'onComplete': function() {
-					root._display.modal.setStyle('display', 'none');
-				}
-			});
-			this.lock(0);
-			morph.start({
-				'opacity': 0
-			});
 			this.isOpen = false;
 			this.fireEvent('hide');
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->hide: ', e.message); }
-	},
-
-	destroy: function() {
-		gx.bootstrap.PopupMeta.unregister(this);
-
-		[
-			this._ui.blend,
-			this._display.blend,
-			this._ui.modal,
-			this._display.modal
-		].each(function(item) {
-			if ( item != null ) {
-				item.destroy();
-			}
-		});
-
-		delete this;
-
-	},
-
-	doDestroy: function() {
-		this.destroy();
 	}
 });

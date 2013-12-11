@@ -28,7 +28,7 @@ gx.bootstrap.Table = new Class({
 	gx: 'gx.bootstrap.Table',
 	Extends: gx.ui.Table,
 
-	theme: {
+	_theme: {
 		'asc': 'asc',
 		'desc': 'desc',
 		'th': 'th',
