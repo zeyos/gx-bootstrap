@@ -66,14 +66,14 @@ gx.bootstrap.Checklist = new Class({
 					root.search(root._display.search.txt.value);
 				});
 			}
-			this._display.table = new Element('table', {'class': 'table table-striped'});
+			this._display.table = new Element('table', {'class': 'table table-striped'}).setStyle('margin-bottom', '0px');
 			if (this.options.onClick)
 				this._display.table.addEvent('click', this.options.onClick);
 			this._display.frame.adopt(this._display.table);
 
 			if (this.options.url)
 				this.loadFromURL(this.options.url, this.options.requestData);
-			if (isArray(this.options.data))
+			if (Array.isArray(this.options.data))
 				this.set(this.options.data);
 		} catch(e) { gx.util.Console('gx.bootstrap.Checklist->initialize', e.message); }
 	},
