@@ -42,12 +42,14 @@ gx.bootstrap.PopupMeta = new (function() {
 		return this.popups.length;
 	}
 
-	$(document.body).addEvent('keyup', function(event) {
-		if (event.key == 'esc') {
-			var popup = this.popups.getLast();
-			if (popup != null && popup.options.closable)
-				popup.hide();
-		}
+	window.addEvent('domready', function() {
+		$(document.body).addEvent('keyup', function(event) {
+			if (event.key == 'esc') {
+				var popup = this.popups.getLast();
+				if (popup != null && popup.options.closable)
+					popup.hide();
+			}
+		}.bind(this));
 	}.bind(this));
 })();
 
