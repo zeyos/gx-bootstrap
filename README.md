@@ -1,7 +1,11 @@
 Gx Bootstrap Components
 =======================
 
-Gx is an extensible component library build on the gread MooTools framework.
+Gx is an extensible component library build on MooTools. The Bootstrap module includes various components for Bootstrap CSS version 3.1.0
+
+
+Components
+----------
 
 
 Usage
