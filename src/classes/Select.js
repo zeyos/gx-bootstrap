@@ -67,7 +67,8 @@ gx.bootstrap.Select = new Class({
 				'noSelection': 'Keine Auswahl'
 			},
 			'noSelection': 'No Selection'
-		}
+		},
+		'requestFunc'    : null
 	},
 
 	_running   : false,
@@ -151,9 +152,44 @@ gx.bootstrap.Select = new Class({
 
 			this._display.textbox.setStyle('font-style', 'italic');
 			this._display.textbox.value = '('+this.getMessage('noSelection')+')';
+
+			console.log('init select');
+
+			if (gx.util.isFunction(this.options.requestFunc))
+				this.request = this.options.requestFunc.bind(this);
 		} catch(e) {
 			gx.util.Console('gx.bootstrap.Select->initialize', gx.util.parseError(e) );
 		}
+	},
+
+	/**
+	 * @method request
+	 * @description Performs the search request
+	 * @param {object} data
+	 * @returns void
+	 */
+	request: function(data) {
+		var reqOptions = {
+			'method'   : root.options.method,
+			'url'      : root.options.url,
+			'data'     : data,
+			'onSuccess': function (json) {
+				root.evalResponse(json);
+			},
+			'onFailure': function () {
+				alert('Request failed');
+			}
+		};
+
+		if ( typeOf(root.options.enableLoader) == 'function' )
+			reqOptions.onRequest = root.options.enableLoader;
+
+		if ( typeOf(root.options.disableLoader) == 'function' )
+			reqOptions.onComplete = root.options.disableLoader;
+
+		req = new Request(reqOptions);
+
+		req.send();
 	},
 
 	/**
@@ -161,7 +197,6 @@ gx.bootstrap.Select = new Class({
 	 * @description Initiates a search request
 	 * @param {string} search The search string
 	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
 	 */
 	search: function (search) {
 		var root = this;
@@ -170,11 +205,11 @@ gx.bootstrap.Select = new Class({
 				search = this._display.textbox.value.trim();
 			if ( search == '' || search == null )
 				search = this.options['default'];
-			// search === this._lastSearch strict comparison is necessary.
-			// Because on focus select: '' != false => results in false -> no search will be executed
-			// only '' !== false => results in true
-			if ( search === this._lastSearch ) {
 
+			if ( search === this._lastSearch ) {
+				// search === this._lastSearch strict comparison is necessary.
+				// Because on focus select: '' != false => results in false -> no search will be executed
+				// only '' !== false => results in true
 			} else if ( this.options.localOptions ) {
 				this._lastSearch = search;
 				this.buildList(
@@ -196,28 +231,8 @@ gx.bootstrap.Select = new Class({
 						data[this.options.requestParam] = search;
 				}
 
-				var reqOptions = {
-					'method'   : root.options.method,
-					'url'      : root.options.url,
-					'data'     : data,
-					'onSuccess': function (json) {
-						root.evalResponse(json);
-					},
-					'onFailure': function () {
-						alert('Request failed');
-					}
-				};
-				if ( typeOf(root.options.enableLoader) == 'function' ) {
-					reqOptions.onRequest = root.options.enableLoader;
-
-				}
-				if ( typeOf(root.options.disableLoader) == 'function' ) {
-					reqOptions.onComplete = root.options.disableLoader;
-
-				}
-				req = new Request(reqOptions);
-
-				req.send();
+				// Perform the request
+				this.request(data);
 			}
 		} catch(e) {
 			gx.util.Console('gx.bootstrap.Select->search', e.message);
