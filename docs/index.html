@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="charset" content="utf-8" />
+	<title>gx-zeyos</title>
+
+	<!-- MooTools -->
+	<script language="JavaScript" type="text/javascript" src="../../mootools/mootools-core-1.4.5-yc.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../../mootools/mootools-more-1.4.0.1-yc.js"></script>
+
+	<!-- Gx Core -->
+	<script language="JavaScript" type="text/javascript" src="../../gx-core/dist/gx-core.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="../dist/bootstrap/css/bootstrap.css" />
+	<link rel="stylesheet" type="text/css" href="../dist/gx-bootstrap.css" />
+
+
+	<script src="../src/gx.bootstrap.js"></script>
+<script src="../src/classes/CheckButton.js"></script>
+<script src="../src/classes/Checklist.js"></script>
+<script src="../src/classes/DataFilter.js"></script>
+<script src="../src/classes/Field.js"></script>
+<script src="../src/classes/FieldUpload.js"></script>
+<script src="../src/classes/Fieldset.js"></script>
+<script src="../src/classes/Form.js"></script>
+<script src="../src/classes/MenuButton.js"></script>
+<script src="../src/classes/Message.js"></script>
+<script src="../src/classes/MultiValueEditor.js"></script>
+<script src="../src/classes/NavigationBar.js"></script>
+<script src="../src/classes/Popup.js"></script>
+<script src="../src/classes/Select.js"></script>
+<script src="../src/classes/Tabbox.js"></script>
+<script src="../src/classes/Table.js"></script>
+<script src="../src/classes/Timebox.js"></script>
+<script src="../src/classes/ValueList.js"></script>
+<script src="../src/classes/VersionField.js"></script>
+	<script>
+		window.addEvent('domready', function() {
+			/* gx.bootstrap.Select
+			-------------------------------------- */
+			(function () {
+	var gSelect = new gx.bootstrap.Select(null, {
+		'url': window.location.href.substring(0, window.location.href.lastIndexOf("/")+1) + 'data/select.json',
+		'width': '300px'
+	});
+
+	// Demo Injection
+	$(document.body).adopt(__({'children': [
+		{'tag': 'h5', 'html': 'gx.bootstrap.Select'},
+		{'class': '', 'children': [
+			{'tag': 'label', 'html': 'Selection demo:'},
+			gSelect
+		]},
+		{'class': 'p-10 bg-E', 'children': {
+			btnSelectValue : {'tag': 'button', 'class': 'btn btn-primary', 'html': 'Get selection', 'onClick': function() {
+				alert(JSON.encode(gSelect.getSelected()));
+			}},
+			btnSelectReset : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Reset', 'onClick': function() {
+				gSelect.set();
+			}}
+		}}
+	]}));
+})();
+
+
+
+		});
+	</script>
+
+	<style type="text/css">
+		body {
+			padding: 20px;
+		}
+		h5 {
+			font-size: 14px;
+			font-weight: bold;
+			margin-top: 20px;
+			margin-bottom: 10px;
+		}
+	</style>
+</head>
+
+<body id="body">
+
+
+
+</body>
+</html>

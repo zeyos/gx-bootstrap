@@ -1,4 +1,8 @@
 /**
+ * @extends gx.core
+ */
+gx.bootstrap = {};
+;/**
  * @class gx.bootstrap.CheckButton
  * @description Creates a checkbox button
  * @extends gx.ui.Container
@@ -215,14 +219,14 @@ gx.bootstrap.Checklist = new Class({
 					root.search(root._display.search.txt.value);
 				});
 			}
-			this._display.table = new Element('table', {'class': 'table table-striped'});
+			this._display.table = new Element('table', {'class': 'table table-striped'}).setStyle('margin-bottom', '0px');
 			if (this.options.onClick)
 				this._display.table.addEvent('click', this.options.onClick);
 			this._display.frame.adopt(this._display.table);
 
 			if (this.options.url)
 				this.loadFromURL(this.options.url, this.options.requestData);
-			if (isArray(this.options.data))
+			if (Array.isArray(this.options.data))
 				this.set(this.options.data);
 		} catch(e) { gx.util.Console('gx.bootstrap.Checklist->initialize', e.message); }
 	},
@@ -397,64 +401,6 @@ gx.bootstrap.Checklist = new Class({
 	}
 });
 ;/**
- * @class gx.bootstrap.Confirm
- * @description Acting like browser native confirm.
- * @extends gx.ui.Dropup
- *
- * @option {function} refuse Called if user cancel operation.
- * @option {function} accept Called if user accept operation.
- */
-gx.bootstrap.Confirm = new Class({
-    Extends: gx.bootstrap.Dropup,
-
-    options: {
-        'width': 'auto',
-        'refuse': function(){},
-        'accept': function(){},
-        'closable': true
-    },
-
-    initialize: function(options) {
-        if ( typeOf(options.content) == 'string' )
-            options.content = new Element('h3', {'html': ''+options.content, 'style': 'margin-top:35px;'});
-
-        var root = this;
-        if ( options.footer == null ) {
-            options.footer = [
-                new Element('button', {
-                    'class': 'btn btn-danger',
-                    'html': '<span class="glyphicon glyphicon-remove"></span> Cancel',
-                    'events': {
-                        'click': function() {
-                            root.hide();
-                        }
-                    }
-                }),
-                new Element('button', {
-                    'class': 'btn btn-default',
-                    'html': '<span class="glyphicon glyphicon-ok"></span> Ok',
-                    'events': {
-                        'click': function() {
-                            root.hide(true);
-                            root.options.accept();
-                        }
-                    }
-                })
-            ];
-        }
-
-        this.parent(options);
-
-        this.show();
-    },
-    hide: function(suppress) {
-        this.parent();
-        this.destroy();
-
-        if ( suppress !== true )
-            this.options.refuse();
-    }
-});;/**
  * @class gx.bootstrap.DataFilter
  * @description Client side data filtering.
  * @extends gx.core.Settings
@@ -2879,12 +2825,14 @@ gx.bootstrap.PopupMeta = new (function() {
 		return this.popups.length;
 	}
 
-	$(document.body).addEvent('keyup', function(event) {
-		if (event.key == 'esc') {
-			var popup = this.popups.getLast();
-			if (popup != null && popup.options.closable)
-				popup.hide();
-		}
+	window.addEvent('domready', function() {
+		$(document.body).addEvent('keyup', function(event) {
+			if (event.key == 'esc') {
+				var popup = this.popups.getLast();
+				if (popup != null && popup.options.closable)
+					popup.hide();
+			}
+		}.bind(this));
 	}.bind(this));
 })();
 
@@ -3136,7 +3084,8 @@ gx.bootstrap.Select = new Class({
 				'noSelection': 'Keine Auswahl'
 			},
 			'noSelection': 'No Selection'
-		}
+		},
+		'requestFunc'    : null
 	},
 
 	_running   : false,
@@ -3220,9 +3169,44 @@ gx.bootstrap.Select = new Class({
 
 			this._display.textbox.setStyle('font-style', 'italic');
 			this._display.textbox.value = '('+this.getMessage('noSelection')+')';
+
+			console.log('init select');
+
+			if (gx.util.isFunction(this.options.requestFunc))
+				this.request = this.options.requestFunc.bind(this);
 		} catch(e) {
 			gx.util.Console('gx.bootstrap.Select->initialize', gx.util.parseError(e) );
 		}
+	},
+
+	/**
+	 * @method request
+	 * @description Performs the search request
+	 * @param {object} data
+	 * @returns void
+	 */
+	request: function(data) {
+		var reqOptions = {
+			'method'   : root.options.method,
+			'url'      : root.options.url,
+			'data'     : data,
+			'onSuccess': function (json) {
+				root.evalResponse(json);
+			},
+			'onFailure': function () {
+				alert('Request failed');
+			}
+		};
+
+		if ( typeOf(root.options.enableLoader) == 'function' )
+			reqOptions.onRequest = root.options.enableLoader;
+
+		if ( typeOf(root.options.disableLoader) == 'function' )
+			reqOptions.onComplete = root.options.disableLoader;
+
+		req = new Request(reqOptions);
+
+		req.send();
 	},
 
 	/**
@@ -3230,7 +3214,6 @@ gx.bootstrap.Select = new Class({
 	 * @description Initiates a search request
 	 * @param {string} search The search string
 	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
 	 */
 	search: function (search) {
 		var root = this;
@@ -3239,11 +3222,11 @@ gx.bootstrap.Select = new Class({
 				search = this._display.textbox.value.trim();
 			if ( search == '' || search == null )
 				search = this.options['default'];
-			// search === this._lastSearch strict comparison is necessary.
-			// Because on focus select: '' != false => results in false -> no search will be executed
-			// only '' !== false => results in true
-			if ( search === this._lastSearch ) {
 
+			if ( search === this._lastSearch ) {
+				// search === this._lastSearch strict comparison is necessary.
+				// Because on focus select: '' != false => results in false -> no search will be executed
+				// only '' !== false => results in true
 			} else if ( this.options.localOptions ) {
 				this._lastSearch = search;
 				this.buildList(
@@ -3265,28 +3248,8 @@ gx.bootstrap.Select = new Class({
 						data[this.options.requestParam] = search;
 				}
 
-				var reqOptions = {
-					'method'   : root.options.method,
-					'url'      : root.options.url,
-					'data'     : data,
-					'onSuccess': function (json) {
-						root.evalResponse(json);
-					},
-					'onFailure': function () {
-						alert('Request failed');
-					}
-				};
-				if ( typeOf(root.options.enableLoader) == 'function' ) {
-					reqOptions.onRequest = root.options.enableLoader;
-
-				}
-				if ( typeOf(root.options.disableLoader) == 'function' ) {
-					reqOptions.onComplete = root.options.disableLoader;
-
-				}
-				req = new Request(reqOptions);
-
-				req.send();
+				// Perform the request
+				this.request(data);
 			}
 		} catch(e) {
 			gx.util.Console('gx.bootstrap.Select->search', e.message);
