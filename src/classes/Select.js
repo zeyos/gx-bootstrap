@@ -17,7 +17,9 @@
  * @option {string|function} elementSelect   The label for selected elements or alternative format function
  * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
  *
- * @event select When an element is selected
+ * @event show     When the selection list is shown
+ * @event hide     When the selection list is hidden
+ * @event select   When an element is selected
  * @event noselect When no element is selected
  *
  */
@@ -25,7 +27,7 @@ gx.bootstrap.Select = new Class({
 	gx: 'gx.bootstrap.Select',
 	Extends: gx.ui.Container,
 	options: {
-		'height'         : '200px',
+		'height'         : 'auto',
 		'allowEmpty'     : false,
 		'selectionLabel' : false,
 		'icon'           : 'chevron-down',
@@ -45,7 +47,7 @@ gx.bootstrap.Select = new Class({
 	_closed    : true,
 	_selected  : null,
 	_search    : '',
-	elementSelection: null,
+	_currentElem: null,
 	_running   : false,
 
 	initialize: function (display, options) {
@@ -110,36 +112,38 @@ gx.bootstrap.Select = new Class({
 					} else if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 
+						this.show();
+
 						var li;
-						if (this.elementSelection == null) {
+						if (this._currentElem == null) {
 							if(event.key == 'down')
 								li = this._display.dropdown.getFirst();
 							else
 								li = this._display.dropdown.getLast();
 						} else {
 							if(event.key == 'down') {
-								li = this.elementSelection.getNext();
-								if (li == null && this.elementSelection == this._display.dropdown.getLast())
+								li = this._currentElem.getNext();
+								if (li == null && this._currentElem == this._display.dropdown.getLast())
 									li = this._display.dropdown.getFirst();
 							} else {
-								li = this.elementSelection.getPrevious();
-								if (li == null && this.elementSelection == this._display.dropdown.getFirst())
+								li = this._currentElem.getPrevious();
+								if (li == null && this._currentElem == this._display.dropdown.getFirst())
 									li = this._display.dropdown.getLast();
 							}
 						}
 
 						if (li != null) {
-							if (this.elementSelection != null)
-								this.elementSelection.removeClass('active');
-							this.elementSelection = li;
-							this.elementSelection.addClass('active');
-							this.fxScoll.toElement(this.elementSelection);
+							if (this._currentElem != null)
+								this._currentElem.removeClass('active');
+							this._currentElem = li;
+							this._currentElem.addClass('active');
+							this.fxScoll.toElement(this._currentElem);
 						}
 
 						return;
 					} else if ( event.key == 'enter' ) {
-						if (this.elementSelection != null) {
-							var a = this.elementSelection.getElement('a');
+						if (this._currentElem != null) {
+							var a = this._currentElem.getElement('a');
 							if (a != null)
 								a.fireEvent('click');
 						}
@@ -234,7 +238,7 @@ gx.bootstrap.Select = new Class({
 		var root = this;
 		try {
 			this._display.dropdown.empty();
-			this.elementSelection = null;
+			this._currentElem = null;
 
 			if (this.options.resetable) {
 				this._display.dropdown.adopt(__({'tag': 'li', 'child':
@@ -286,10 +290,10 @@ gx.bootstrap.Select = new Class({
 			return this;
 
 		this._display.root.addClass('open');
-		// this._display.textbox.set('value', this._search);
 		this._display.textbox.focus();
 
-		return this.search();
+		this.fireEvent('show');
+		return this;
 	},
 
 	/**
@@ -303,14 +307,15 @@ gx.bootstrap.Select = new Class({
 			return this;
 
 		this._display.root.removeClass('open');
-		// this._search = this._display.textbox.value;
+		this.clearCursor();
 
+		this.fireEvent('hide');
 		return this.update();
 	},
 
 	/**
-	 * Returns if the list box is open
-	 *
+	 * @method isOpen
+	 * @description Returns if the list box is open
 	 * @return {bool}
 	 */
 	isOpen: function() {
@@ -334,6 +339,18 @@ gx.bootstrap.Select = new Class({
 	},
 
 	/**
+	 * @method clearCursor
+	 * @description Removes the current list selection
+	 */
+	clearCursor: function() {
+		if (this._currentElem == null)
+			return;
+
+		this._currentElem.removeClass('active');
+		this._currentElem = null;
+	},
+
+	/**
 	 * @method reset
 	 * @description Resets the selection
 	 * @param {bool} noEvents Do not throw events
@@ -342,7 +359,7 @@ gx.bootstrap.Select = new Class({
 	 */
 	reset: function (noEvents) {
 		this._display.listbox.empty();
-		this.elementSelection = null;
+		this._currentElem = null;
 
 		return this.set(null, noEvents);
 	},
@@ -388,14 +405,48 @@ gx.bootstrap.SelectPrio = new Class({
 			'medium' : 'Medium',
 			'high'   : 'High',
 			'highest': 'Highest'
-		}
+		},
+		'value': 0
 	},
+
 	initialize: function (display, options) {
 		var root = this;
 		try {
-			for (var i = 0 ; i < data.length ; i++) {
-				this.options.data[i].name = this.options.data[i].symbol + ' | ' + this.getMessage(this.options.data[i].label);
+			this.parent(display, options);
+			if (this.options.value != null) {
+				this.options.data.each(function(entry) {
+					if (entry.value == this.options.value)
+						this.set(entry, true);
+				}.bind(this));
 			}
+		} catch(e) {
+			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
+			throw e;
+		}
+	},
+
+	showSelection: function() {
+		this._display.textbox.set('value', this._selected == null ? '' : this._selected.symbol + ' | ' + this.getMessage(this._selected.label));
+	},
+
+	getLink: function(elem) {
+		return new Element('a', {'html': elem.symbol + ' | ' + this.getMessage(elem.label), 'styles': {'color': elem.color}});
+	}
+});
+
+gx.bootstrap.SelectDyn = new Class({
+	gx: 'gx.bootstrap.SelectDyn',
+	Extends: gx.bootstrap.Select,
+	options: {
+		'height': '200px',
+	},
+
+	initialize: function (display, options) {
+		var root = this;
+		try {
+			this.addEvent('show', function() {
+				this.search()
+			}.bind(this));
 			this.parent(display, options);
 		} catch(e) {
 			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
@@ -404,12 +455,13 @@ gx.bootstrap.SelectPrio = new Class({
 	},
 
 	/**
-	 * Returns the element's link
-	 *
-	 * @param  {object} elem
-	 * @return {element}
+	 * @method search
+	 * @description Initiates a search request
+	 * @param {string} search The search string
+	 * @returns Returns this instance (for method chaining).
 	 */
-	getLink: function(elem) {
-		return new Element('a', {'html': elem.name, 'styles': {'color': elem.color}});
+	search: function (search) {
+
 	}
 });
+

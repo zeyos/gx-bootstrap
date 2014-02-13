@@ -1,8 +1,12 @@
 (function () {
+	/*
 	var gSelect = new gx.bootstrap.Select(null, {
 		'url': window.location.href.substring(0, window.location.href.lastIndexOf("/")+1) + 'data/select.json',
 		'width': '300px'
 	});
+	*/
+
+	var gSelect = new gx.bootstrap.SelectPrio();
 
 	// Demo Injection
 	$(document.body).adopt(__({'children': [
