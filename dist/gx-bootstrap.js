@@ -3051,14 +3051,13 @@ gx.bootstrap.Select = new Class({
 		'disableLoader'  : undefined,
 		'method'         : 'GET',
 		'url'            : 'index.php',
-		'height'         : '100px',
-		'width'          : '180px',
+		'height'         : '200px',
 		'requestData'    : {},
 		'requestParam'   : 'search',
 		'searchFilter'   : undefined,
 		'localOptions'   : null,
 		'allowEmpty'     : false,
-		'icon'           : 'list-alt',
+		'icon'           : 'chevron-down',
 
 		/**
 		 * A string to use as the component's label or an object to pass to "Element.set()".
@@ -3078,6 +3077,7 @@ gx.bootstrap.Select = new Class({
 			return JSON.decode(json);
 		},
 		'reset'          : false,
+		'textboxClass'   : false,
 		/* Messages */
 		'msg'            : {
 			'de'         : {
@@ -3093,6 +3093,7 @@ gx.bootstrap.Select = new Class({
 	_lastSearch: false,
 	_selected  : null,
 	_search    : '',
+	elementSelection: null,
 
 	initialize: function (display, options) {
 		var root = this;
@@ -3102,80 +3103,107 @@ gx.bootstrap.Select = new Class({
 			if (this.options.textFormat == null)
 				this.options.textFormat = this.options.listFormat;
 
-			this._display.root.addClass('bs-select input-group');
+			this._display.root.addClass('bs-select');
+
 			this._display.textbox = new Element('input', {
-				'type'  : 'text',
-				'class' : 'left form-control',
-				'styles': {'width': this.options.width}
+				'type'       : 'text',
+				'class'      : 'form-control',
+				'placeholder': '('+this.getMessage('noSelection')+')'
 			});
-			var iconMarkup = ( this.options.icon ? '<span class="glyphicon glyphicon-'+this.options.icon+'"></span>&nbsp;' : '' );
+			if (this.options.textboxClass)
+				this._display.textbox.addClass(this.options.textboxClass);
 
-			this._display.symbol = new Element('span')
-				.addEvent('click', function (event) {
-					event.stopPropagation();
-					root.show();
-				});
-
-			if ( this.options.label && (typeof(this.options.label) === 'object') ) {
-				var labelOptions = Object.clone(this.options.label);
-				var labelText    = ( labelOptions.html == null ? String(labelOptions.text).htmlSpecialChars() : labelOptions.html );
-				labelOptions.html = iconMarkup+( labelOptions.text ? ' '+labelOptions.text : '' );
-				delete labelOptions.text;
-				this._display.symbol.set(labelOptions);
-			} else if (iconMarkup != '' || (this.options.label && this.options.label != '')) {
-				this._display.symbol.set('html', iconMarkup+( this.options.label ? ' '+this.options.label : '' ))
-			}
-
-			this._display.symbol.addClass('input-group-addon');
-
-			this._display.navbar = new Element('div', {'class': 'navbar', 'styles': {'position': 'absolute'}});
-			this._display.dropdown = new Element('div', {'class': 'dropdown'});
-			this._display.frame = new Element('div', {'class': 'dropdown-menu bs-select-menu'});
-			this._display.dropdown.adopt(this._display.frame);
-			this._display.navbar.adopt(this._display.dropdown);
-
-			this._display.listbox = new Element('div', {
+			this._display.dropdown = new Element('ul', {
+				'class': 'dropdown-menu',
 				'styles': {
-					'height': this.options.height,
-					'overflow': 'auto'
+					'height': this.options.height
 				}
 			});
-
-			this._display.frame.adopt(this._display.listbox);
-
-			if ( this.options.orientation == 'left' )
-				this._display.root.adopt([this._display.symbol, this._display.textbox]);
-			else {
-				this._display.root.addClass('bs-select-append');
-				this._display.root.adopt([this._display.textbox, this._display.symbol]);
-			}
 
 			this._display.root.adopt([
-				new Element('div', {'class': 'clear'}),
-				this._display.navbar
+				new Element('span', {'class': 'glyphicon glyphicon-'+this.options.icon}),
+				this._display.textbox,
+				this._display.dropdown
 			]);
 
-			this._display.textbox.addEvents({
-				'focus': function () {
-					root.show();
-				},
-				'keyup': function () {
-					root.search();
-				},
-				'blur': function () {
-					root.hide.delay(500, root);
+			// Initialize keyboard controls
+			this.fxScoll = new Fx.Scroll(this._display.dropdown, {
+				offset: {
+					y: -100
 				}
 			});
+			this._display.textbox.addEvents({
+				'focus': function () {
+					this.show();
+				}.bind(this),
+				'blur': function () {
+					this.hide.delay(500, root);
+				}.bind(this),
+				'keypress': function (event) {
+					if (event.key == 'up' || event.key == 'down') {
+						event.preventDefault();
+						return;
+					}
+				}.bind(this),
+				'keydown': function (event) {
+					if (event.key == 'up' || event.key == 'down') {
+						event.preventDefault();
+						return;
+					}
+				}.bind(this),
+				'keyup': function (event) {
+					if (event.key == 'esc') {
+						this.select();
+					} else if (event.key == 'up' || event.key == 'down') {
+						event.preventDefault();
 
-			this._display.textbox.setStyle('font-style', 'italic');
-			this._display.textbox.value = '('+this.getMessage('noSelection')+')';
+						var li;
+						if (this.elementSelection == null) {
+							if(event.key == 'down')
+								li = this._display.dropdown.getFirst();
+							else
+								li = this._display.dropdown.getLast();
+						} else {
+							if(event.key == 'down') {
+								li = this.elementSelection.getNext();
+								if (li == null && this.elementSelection == this._display.dropdown.getLast())
+									li = this._display.dropdown.getFirst();
+							} else {
+								li = this.elementSelection.getPrevious();
+								if (li == null && this.elementSelection == this._display.dropdown.getFirst())
+									li = this._display.dropdown.getLast();
+							}
+						}
 
-			console.log('init select');
+						if (li != null) {
+							if (this.elementSelection != null)
+								this.elementSelection.removeClass('active');
+							this.elementSelection = li;
+							this.elementSelection.addClass('active');
+							this.fxScoll.toElement(this.elementSelection);
+						}
 
+						return;
+					} else if (event.key == 'enter') {
+						if (this.elementSelection != null) {
+							var a = this.elementSelection.getElement('a');
+							if (a != null)
+								a.fireEvent('click');
+						}
+
+						return;
+					}
+
+					this.search();
+				}.bind(this)
+			});
+
+			// Overwrite the default request function
 			if (gx.util.isFunction(this.options.requestFunc))
 				this.request = this.options.requestFunc.bind(this);
 		} catch(e) {
-			gx.util.Console('gx.bootstrap.Select->initialize', gx.util.parseError(e) );
+			e.message = 'gx.bootstrap.Select: ' + e.message;
+			throw e;
 		}
 	},
 
@@ -3187,22 +3215,22 @@ gx.bootstrap.Select = new Class({
 	 */
 	request: function(data) {
 		var reqOptions = {
-			'method'   : root.options.method,
-			'url'      : root.options.url,
+			'method'   : this.options.method,
+			'url'      : this.options.url,
 			'data'     : data,
 			'onSuccess': function (json) {
-				root.evalResponse(json);
-			},
+				this.evalResponse(this.options.decodeResponse(json));
+			}.bind(this),
 			'onFailure': function () {
-				alert('Request failed');
-			}
+				// alert('Request failed');
+			}.bind(this)
 		};
 
-		if ( typeOf(root.options.enableLoader) == 'function' )
-			reqOptions.onRequest = root.options.enableLoader;
+		if ( typeOf(this.options.enableLoader) == 'function' )
+			reqOptions.onRequest = this.options.enableLoader;
 
-		if ( typeOf(root.options.disableLoader) == 'function' )
-			reqOptions.onComplete = root.options.disableLoader;
+		if ( typeOf(this.options.disableLoader) == 'function' )
+			reqOptions.onComplete = this.options.disableLoader;
 
 		req = new Request(reqOptions);
 
@@ -3252,7 +3280,8 @@ gx.bootstrap.Select = new Class({
 				this.request(data);
 			}
 		} catch(e) {
-			gx.util.Console('gx.bootstrap.Select->search', e.message);
+			e.message = 'gx.bootstrap.Select: ' + e.message;
+			throw e;
 		}
 
 		return this;
@@ -3261,18 +3290,17 @@ gx.bootstrap.Select = new Class({
 	/**
 	 * @method evalResponse
 	 * @description Evaluates the response: Decodes the JSON, calls buildList with the result and then calls search
-	 * @param {string} json The JSON response to evaluate
+	 * @param {string} data
 	 * @returns Returns this instance (for method chaining).
 	 * @type gx.bootstrap.Select
 	 */
-	evalResponse: function (json) {
+	evalResponse: function (data) {
 		try {
-			var obj = this.options.decodeResponse(json);
-			if ( typeOf(obj) == 'array' )
+			if ( typeOf(data) == 'array' )
 				this.buildList(
 					this.options.searchFilter
-					? this.options.searchFilter(obj, this._lastSearch)
-					: obj
+					? this.options.searchFilter(data, this._lastSearch)
+					: data
 				);
 			else
 				gx.util.Console('gx.bootstrap.Select->evalResponse.', 'Invalid object type. Array expected.');
@@ -3292,15 +3320,16 @@ gx.bootstrap.Select = new Class({
 	buildList: function (list) {
 		var root = this;
 		try {
-			this._display.listbox.empty();
+			this._display.dropdown.empty();
 
 			if (this.options.reset) {
-				this._display.listbox.adopt(new Element('a', {'styles': {'text-align': 'center', 'font-style': 'italic'}, 'html': this.options.reset}).addEvent('click', function() {
-					root.set();
+				this._display.dropdown.adopt(__({'tag': 'li', 'child':
+					{'tag': 'a', 'class': 'reset', 'html': this.options.reset, 'onClick': function() {
+						this.set();
+					}.bind(this)}
 				}));
 			}
 
-			var odd = true;
 			var addCLink = function (link, el) {
 				link.addEvent('click', function () {
 					root.set(el);
@@ -3313,23 +3342,21 @@ gx.bootstrap.Select = new Class({
 			var len = list.length;
 
 			for (i = 0 ; i < len ; i++) {
-				var link = new Element('a');
-				if ( odd )
-					link.set('class', 'odd');
+				var li = new Element('li');
 
-				var contents = (
-					( (list[i] == null) && (typeof(this.options.allowEmpty) === 'string') )
-					? this.options.allowEmpty
-					: this.options.listFormat(list[i])
-				);
-				if ( typeOf(contents).match(/^elements?$/) )
-					link.empty().adopt(contents);
-				else
-					link.set('html', contents);
+				var contents;
+				if (list[i] == null) {
+					if (gx.util.isString(this.options.allowEmpty))
+						contents = this.options.allowEmpty;
+					else
+						continue;
+				} else {
+					contents = this.options.listFormat(list[i]);
+				}
 
-				this._display.listbox.adopt(link);
-				odd = !odd;
-				addCLink(link, list[i]);
+				var a = gx.util.isElement(contents) ? contents : new Element('a', {'html': contents});
+				this._display.dropdown.adopt(li.adopt(a));
+				addCLink(a, list[i]);
 			}
 		} catch(e) {
 			gx.util.Console('gx.bootstrap.Select->buildList', e.message);
@@ -3348,7 +3375,7 @@ gx.bootstrap.Select = new Class({
 		if ( this._display.textbox.disabled )
 			return this;
 
-		this._display.frame.setStyle('display', 'block');
+		this._display.root.addClass('open');
 		this._display.textbox.set('value', this._search);
 		this._display.textbox.focus();
 		this._closed = false;
@@ -3366,8 +3393,8 @@ gx.bootstrap.Select = new Class({
 		if ( this._closed )
 			return this;
 
+		this._display.root.removeClass('open');
 		this._closed = true;
-		this._display.frame.setStyle('display', 'none');
 		this._search = this._display.textbox.value;
 
 		return this.update();
@@ -3384,13 +3411,11 @@ gx.bootstrap.Select = new Class({
 		if ( this._selected == null ) {
 			if (noEvents == null || !noEvents)
 				this.fireEvent('noselect');
-			this._display.textbox.setStyle('font-style', 'italic');
-			this._display.textbox.value = '('+this.getMessage('noSelection')+')';
+			this._display.textbox.erase('value');
 		} else {
 			if (noEvents == null || !noEvents)
 				this.fireEvent('select', this._selected);
-			this._display.textbox.setStyle('font-style', 'normal');
-			this._display.textbox.value = this.options.textFormat(this._selected);
+			this._display.textbox.set('value', this.options.textFormat(this._selected));
 		}
 
 		return this;

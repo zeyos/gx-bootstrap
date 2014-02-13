@@ -18,78 +18,59 @@
 	text-shadow: 2px 2px 2px #efefef;
 }
 
-.bs-timebox .separator {
-	display: inline-block;
-	*display: inline;
-	/* IE7 inline-block hack */
-	*zoom: 1;
-	padding: 4px 1px 4px;
-	margin-bottom: 0;
-	font-size: 13px;
-	font-weight: bold;
-	line-height: 18px;
-	color: #333333;
-	text-align: center;
-	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.75);
-	vertical-align: middle;
-	background-color: #EEEEEE;
-	border: 1px solid #cccccc;
-	border-bottom-color: #b3b3b3;
-	border-right-width: 0;
-	border-left-width: 0;
-	*margin-left: .3em;
-}
-.bs-timebox input {
-	width: 25px;
-	text-align: center;
+.bs-timebox {
+	.separator {
+		display: inline-block;
+		*display: inline;
+		/* IE7 inline-block hack */
+		*zoom: 1;
+		padding: 4px 1px 4px;
+		margin-bottom: 0;
+		font-size: 13px;
+		font-weight: bold;
+		line-height: 18px;
+		color: #333333;
+		text-align: center;
+		text-shadow: 0 1px 1px rgba(255, 255, 255, 0.75);
+		vertical-align: middle;
+		background-color: #EEEEEE;
+		border: 1px solid #cccccc;
+		border-bottom-color: #b3b3b3;
+		border-right-width: 0;
+		border-left-width: 0;
+		*margin-left: .3em;
+	}
+	input {
+		width: 25px;
+		text-align: center;
+	}
 }
 .bs-select {
 	position: relative;
-}
-.bs-select .add-on {
-	border-color: #b94a48;
-	float: left;
-	display: block;
-	width: auto;
-	min-width: 16px;
-	padding: 4px 5px;
-	font-weight: normal;
-	/* color: #999999; */
-	text-align: center;
-	text-shadow: 0 1px 0 #ffffff;
-	background-color: #f5f5f5;
-	border: 1px solid #ccc;
-	margin-left: 1px;
-	-webkit-border-radius: 3px 0 0 3px;
-	-moz-border-radius: 3px 0 0 3px;
-	border-radius: 3px 0 0 3px;
-}
-.bs-select-append .add-on {
-	margin-right: 0;
-	margin-left: -1px;
-	-webkit-border-radius: 0 3px 3px 0;
-	-moz-border-radius: 0 3px 3px 0;
-	border-radius: 0 3px 3px 0;
-}
-.bs-select-menu {
-	padding-right: 1px;
-	position: absolute;
-	overflow: 'auto';
-}
-.bs-select-menu a {
-	font-size: 1em;
-	padding: 0.3em 0.5em;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	display:block;
-}
-.bs-select-menu a:nth-child(odd) { background-color: #f5f5f5; }
-.bs-select-menu a:hover {
-	cursor: pointer;
-	color: #ffffff;
-	text-decoration: none;
-	background-color: #0088cc;
+	>.glyphicon {
+		position: absolute;
+		right: 10px;
+		top: 10px;
+		color: #4d4d4d;
+	}
+	>input.form-control {
+
+	}
+	.dropdown-menu {
+		position: absolute;
+		width: 100%;
+		overflow: auto;
+		a.reset {
+			text-align: center;
+			font-style: italic;
+		}
+		li.active {
+			a {
+				background: #428bca;
+				color: #FFF;
+			}
+		}
+	}
 }
 
 .input-prepend input, .input-append input {
