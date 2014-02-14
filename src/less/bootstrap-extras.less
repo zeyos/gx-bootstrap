@@ -1,3 +1,48 @@
+.bs-select {
+	position: relative;
+	>.glyphicon {
+		position: absolute;
+		right: 10px;
+		top: 10px;
+		color: #4d4d4d;
+		&.glyphicon-refresh {
+			cursor: progress;
+			-webkit-transition: opacity 0.25s, max-width 0.45s;
+			-moz-transition: opacity 0.25s, max-width 0.45s;
+			-o-transition: opacity 0.25s, max-width 0.45s;
+			transition: opacity 0.25s, max-width 0.45s; /* Duration fixed since we animate additional hidden width */
+		}
+	}
+	>input.form-control {
+
+	}
+	.dropdown-menu {
+		position: absolute;
+		width: 100%;
+		overflow: auto;
+		a.reset {
+			text-align: center;
+			font-style: italic;
+			border-top: 1px solid transparent;
+			border-bottom: 1px solid transparent;
+		}
+		li.selected {
+			a {
+				background: #eaedf3;
+				border-top-color: #d0d4da;
+				border-bottom-color: #d0d4da;
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+
 
 .bs-checklist table tr:FIRST-CHILD td {
 	border-top: none;
@@ -43,36 +88,6 @@
 	input {
 		width: 25px;
 		text-align: center;
-	}
-}
-.bs-select {
-	position: relative;
-	>.glyphicon {
-		position: absolute;
-		right: 10px;
-		top: 10px;
-		color: #4d4d4d;
-	}
-	>input.form-control {
-
-	}
-	.dropdown-menu {
-		position: absolute;
-		width: 100%;
-		overflow: auto;
-		a.reset {
-			text-align: center;
-			font-style: italic;
-			border-top: 1px solid transparent;
-			border-bottom: 1px solid transparent;
-		}
-		li.active {
-			a {
-				background: #eaedf3;
-				border-top-color: #d0d4da;
-				border-bottom-color: #d0d4da;
-			}
-		}
 	}
 }
 

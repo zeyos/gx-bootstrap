@@ -4,9 +4,10 @@
  * @extends gx.ui.Container
  * @implements gx.util.Console
  *
- * @param {element|string} display The display element
+ * @param  {element|string}  display         The display element
+ * @param  {object}          options
  *
- * @option {string}          height          Default: 200px
+ * @option {string}          height          Default: auto
  * @option {string}          selectionPrefix An optional prefix displayed in front of the selected value
  * @option {string}          icon            The glyphikon icon (default: chevron-down)
  * @option (string)          resetable       If set, add an additional list option to reset the selection (e.g. "Select all")
@@ -16,6 +17,7 @@
  * @option {string|function} elementLabel    Element label or alternative list format (Default returns a:"elem.name")
  * @option {string|function} elementSelect   The label for selected elements or alternative format function
  * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
+ * @option {string|int}      value           Specifies the default/preset value or simple lists
  *
  * @event show     When the selection list is shown
  * @event hide     When the selection list is hidden
@@ -39,6 +41,7 @@ gx.bootstrap.Select = new Class({
 		'elementLabel'   : 'name',
 		'elementSelect'  : 'name',
 		'elementDefault' : null,
+		'value'          : null,
 		/* Messages */
 		'msg'            : {
 			'noSelection': 'No Selection'
@@ -46,7 +49,6 @@ gx.bootstrap.Select = new Class({
 	},
 	_closed    : true,
 	_selected  : null,
-	_search    : '',
 	_currentElem: null,
 	_running   : false,
 
@@ -72,8 +74,10 @@ gx.bootstrap.Select = new Class({
 				}
 			});
 
+			this._display.icon = new Element('span', {'class': 'glyphicon glyphicon-'+this.options.icon});
+
 			this._display.root.adopt([
-				new Element('span', {'class': 'glyphicon glyphicon-'+this.options.icon}),
+				this._display.icon,
 				this._display.textbox,
 				this._display.dropdown
 			]);
@@ -99,12 +103,16 @@ gx.bootstrap.Select = new Class({
 						event.preventDefault();
 						return;
 					}
+					if ( this.search == null )
+						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keydown': function (event) {
 					if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 						return;
 					}
+					if ( this.search == null )
+						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keyup': function (event) {
 					if ( event.key == 'esc' ) {
@@ -117,26 +125,26 @@ gx.bootstrap.Select = new Class({
 						var li;
 						if (this._currentElem == null) {
 							if(event.key == 'down')
-								li = this._display.dropdown.getFirst();
+								li = this._display.dropdown.getFirst(':not(.hidden)');
 							else
-								li = this._display.dropdown.getLast();
+								li = this._display.dropdown.getLast(':not(.hidden)');
 						} else {
 							if(event.key == 'down') {
-								li = this._currentElem.getNext();
-								if (li == null && this._currentElem == this._display.dropdown.getLast())
-									li = this._display.dropdown.getFirst();
+								li = this._currentElem.getNext(':not(.hidden)');
+								if (li == null && this._currentElem == this._display.dropdown.getLast(':not(.hidden)'))
+									li = this._display.dropdown.getFirst(':not(.hidden)');
 							} else {
-								li = this._currentElem.getPrevious();
-								if (li == null && this._currentElem == this._display.dropdown.getFirst())
-									li = this._display.dropdown.getLast();
+								li = this._currentElem.getPrevious(':not(.hidden)');
+								if (li == null && this._currentElem == this._display.dropdown.getFirst(':not(.hidden)'))
+									li = this._display.dropdown.getLast(':not(.hidden)');
 							}
 						}
 
 						if (li != null) {
 							if (this._currentElem != null)
-								this._currentElem.removeClass('active');
+								this._currentElem.removeClass('selected');
 							this._currentElem = li;
-							this._currentElem.addClass('active');
+							this._currentElem.addClass('selected');
 							this.fxScoll.toElement(this._currentElem);
 						}
 
@@ -168,7 +176,14 @@ gx.bootstrap.Select = new Class({
 				this.showSelection = this.options.elementSelect.bind(this);
 
 			if (gx.util.isArray(this.options.data))
-				this.buildList(this.options.data);
+				this.setData(this.options.data);
+
+			if (this.options.value != null && gx.util.isString(this.options.elementIndex)) {
+				this.options.data.each(function(entry) {
+					if (entry[this.options.elementIndex] == this.options.value)
+						this.set(entry, true);
+				}.bind(this));
+			}
 		} catch(e) {
 			e.message = 'gx.bootstrap.Select: ' + e.message;
 			throw e;
@@ -228,13 +243,13 @@ gx.bootstrap.Select = new Class({
 	},
 
 	/**
-	 * @method buildList
+	 * @method setData
 	 * @description Builds a list of links from the provided array
 	 * @param {array} list The provided array
 	 * @returns Returns this instance (for method chaining).
 	 * @type gx.bootstrap.Select
 	 */
-	buildList: function (list) {
+	setData: function (list) {
 		var root = this;
 		try {
 			this._display.dropdown.empty();
@@ -269,11 +284,13 @@ gx.bootstrap.Select = new Class({
 				contents = this.getLink(list[i]);
 
 				var a = this.getLink(list[i]);
+				li.store('data', list[i]);
+				li.store('key', i);
 				this._display.dropdown.adopt(li.adopt(a));
 				addCLink(a, list[i]);
 			}
 		} catch(e) {
-			gx.util.Console('gx.bootstrap.Select->buildList', e.message);
+			gx.util.Console('gx.bootstrap.Select->setData', e.message);
 		}
 
 		return this;
@@ -346,7 +363,7 @@ gx.bootstrap.Select = new Class({
 		if (this._currentElem == null)
 			return;
 
-		this._currentElem.removeClass('active');
+		this._currentElem.removeClass('selected');
 		this._currentElem = null;
 	},
 
@@ -387,6 +404,11 @@ gx.bootstrap.Select = new Class({
 	}
 });
 
+/**
+ * @class gx.bootstrap.SelectPrio
+ * @description Creates a priority select box
+ * @extends gx.bootstrap.Select
+ */
 gx.bootstrap.SelectPrio = new Class({
 	gx: 'gx.bootstrap.SelectDyn',
 	Extends: gx.bootstrap.Select,
@@ -406,23 +428,7 @@ gx.bootstrap.SelectPrio = new Class({
 			'high'   : 'High',
 			'highest': 'Highest'
 		},
-		'value': 0
-	},
-
-	initialize: function (display, options) {
-		var root = this;
-		try {
-			this.parent(display, options);
-			if (this.options.value != null) {
-				this.options.data.each(function(entry) {
-					if (entry.value == this.options.value)
-						this.set(entry, true);
-				}.bind(this));
-			}
-		} catch(e) {
-			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
-			throw e;
-		}
+		value: 0
 	},
 
 	showSelection: function() {
@@ -434,11 +440,125 @@ gx.bootstrap.SelectPrio = new Class({
 	}
 });
 
+/**
+ * @class gx.bootstrap.SelectFilter
+ * @description Creates a filterable search list
+ * @extends gx.bootstrap.Select
+ * @implements gx.util.Console
+ *
+ * @param  {element|string}  display         The display element
+ * @param  {object}          options
+ *
+ * @option {string}          height          Default: 200px
+ * @option {string}          selectionPrefix An optional prefix displayed in front of the selected value
+ * @option {string}          icon            The glyphikon icon (default: chevron-down)
+ * @option (string)          resetable       If set, add an additional list option to reset the selection (e.g. "Select all")
+ * @option {string}          textboxClass    Additional textbox class
+ * @option {array}           data            Default data
+ * @option {string|function} elementIndex    The ID format (default key is "ID"; specify function to overwrite)
+ * @option {string|function} elementLabel    Element label or alternative list format (Default returns a:"elem.name")
+ * @option {string|function} elementSelect   The label for selected elements or alternative format function
+ * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
+ * @option {string|int}      value           Specifies the default/preset value or simple lists
+ * @option {array}           searchfields    List of searchable object fields inside
+ *
+ */
+gx.bootstrap.SelectFilter = new Class({
+	gx: 'gx.bootstrap.SelectDyn',
+	Extends: gx.bootstrap.Select,
+	options: {
+		'height'      : '200px',
+		'searchfields': ['name']
+	},
+	_lastSearch: '',
+
+	initialize: function (display, options) {
+		var root = this;
+		try {
+			this.addEvent('show', function() {
+				this.search();
+			}.bind(this));
+			this.parent(display, options);
+		} catch(e) {
+			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			throw e;
+		}
+	},
+
+	/**
+	 * @method search
+	 * @description Performs a search
+	 * @param {string} search The search string
+	 * @returns Returns this instance (for method chaining).
+	 */
+	search: function () {
+		try {
+			var query = this._display.textbox.get('value');
+			if (this._lastSearch == query)
+				return;
+
+			this.clearCursor();
+			this._lastSearch = query;
+
+			this._display.dropdown.getElements('li').each(function(li) {
+				var data = li.retrieve('data', {});
+				this.options.searchfields.each(function(field) {
+					if (query == '') {
+						li.removeClass('hidden');
+						return;
+					}
+					switch (typeOf(data[field])) {
+						case 'number':
+							data[field] = data[field].toString();
+						case 'string':
+							if (data[field].test(query, 'i')) {
+								li.removeClass('hidden');
+								return;
+							}
+					}
+					li.addClass('hidden');
+				}.bind(this));
+			}.bind(this));
+		} catch(e) {
+			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			throw e;
+		}
+	}
+});
+
+/**
+ * @class gx.bootstrap.SelectDyn
+ * @description Creates a dynamic select box with searchable conent
+ * @extends gx.bootstrap.Select
+ * @implements gx.util.Console
+ *
+ * @param  {element|string}  display         The display element
+ * @param  {object}          options
+ *
+ * @option {string}          height          Default: 200px
+ * @option {string}          selectionPrefix An optional prefix displayed in front of the selected value
+ * @option {string}          icon            The glyphikon icon (default: chevron-down)
+ * @option (string)          resetable       If set, add an additional list option to reset the selection (e.g. "Select all")
+ * @option {string}          textboxClass    Additional textbox class
+ * @option {array}           data            Default data
+ * @option {string|function} elementIndex    The ID format (default key is "ID"; specify function to overwrite)
+ * @option {string|function} elementLabel    Element label or alternative list format (Default returns a:"elem.name")
+ * @option {string|function} elementSelect   The label for selected elements or alternative format function
+ * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
+ * @option {string|int}      value           Specifies the default/preset value or simple lists
+ *
+ * @event show     When the selection list is shown
+ * @event hide     When the selection list is hidden
+ * @event select   When an element is selected
+ * @event noselect When no element is selected
+ *
+ */
 gx.bootstrap.SelectDyn = new Class({
 	gx: 'gx.bootstrap.SelectDyn',
 	Extends: gx.bootstrap.Select,
 	options: {
 		'height': '200px',
+		'defaultQuery': ''
 	},
 
 	initialize: function (display, options) {
@@ -461,7 +581,66 @@ gx.bootstrap.SelectDyn = new Class({
 	 * @returns Returns this instance (for method chaining).
 	 */
 	search: function (search) {
+		var root = this;
+		try {
+			if ( search == null )
+				search = this._display.textbox.value.trim();
+			if ( search == '' || search == null )
+				search = this.options.defaultQuery;
 
+			if ( search === this._lastSearch ) {
+				// search === this._lastSearch strict comparison is necessary.
+				// Because on focus select: '' != false => results in false -> no search will be executed
+				// only '' !== false => results in true
+			} else if ( this.options.localOptions ) {
+				this._lastSearch = search;
+				this.setData(
+					this.options.searchFilter
+					? this.options.searchFilter(this.options.localOptions, this._lastSearch)
+					: this.options.localOptions
+				);
+
+			} else if ( this._running !== true ) {
+				this.fireEvent('request');
+				this._running = true;
+				this._lastSearch = search;
+				var data = this.options.requestData;
+
+				if ( !this.options.searchFilter ) {
+					if (typeOf(this.options.requestParam) == 'function')
+						data = this.options.requestParam(data, search);
+					else
+						data[this.options.requestParam] = search;
+				}
+
+				// Perform the request
+				this.request(data);
+			}
+		} catch(e) {
+			e.message = 'gx.bootstrap.Select: ' + e.message;
+			throw e;
+		}
+
+		return this;
+	},
+
+	/**
+	 * @method showLoader
+	 * @description Show the loader icon
+	 * @return gx.bootstrap.SelectDyn
+	 */
+	showLoader: function() {
+		this._display.icon.setClass('glyphicon glyphicon-refresh');
+		return this;
+	},
+
+	/**
+	 * @method hideLoader
+	 * @description Hide the loader icon and restore the default icon
+	 * @return gx.bootstrap.SelectDyn
+	 */
+	hideLoader: function() {
+		this._display.icon.setClass('glyphicon glyphicon-'+this.options.icon);
 	}
 });
 

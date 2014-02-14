@@ -3021,87 +3021,58 @@ gx.bootstrap.Popup = new Class({
  * @extends gx.ui.Container
  * @implements gx.util.Console
  *
- * @param {element|string} display The display element
+ * @param  {element|string}  display         The display element
+ * @param  {object}          options
  *
- * @option {string} method Request method
- * @option {string} url Request URL
- * @option {string} height The height of the select box + 'px', default is '100px'
- * @option {string} width The width of the select box + 'px', default is '150px'
- * @option {object} requestData Additional request data
- * @option {string} requestParam Parameter for the request, default is 'search'
- * @option {string} listValue The key name for element values
- * @option {function} listFormat Formatting function for the list output
- * @option {function} formatID Formatting function for the list output
- * @option {function} decodeResponse Calls JSON.decode
+ * @option {string}          height          Default: auto
+ * @option {string}          selectionPrefix An optional prefix displayed in front of the selected value
+ * @option {string}          icon            The glyphikon icon (default: chevron-down)
+ * @option (string)          resetable       If set, add an additional list option to reset the selection (e.g. "Select all")
+ * @option {string}          textboxClass    Additional textbox class
+ * @option {array}           data            Default data
+ * @option {string|function} elementIndex    The ID format (default key is "ID"; specify function to overwrite)
+ * @option {string|function} elementLabel    Element label or alternative list format (Default returns a:"elem.name")
+ * @option {string|function} elementSelect   The label for selected elements or alternative format function
+ * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
+ * @option {string|int}      value           Specifies the default/preset value or simple lists
  *
- * @event request When the list is requested
- * @event select When an element is selected
+ * @event show     When the selection list is shown
+ * @event hide     When the selection list is hidden
+ * @event select   When an element is selected
  * @event noselect When no element is selected
  *
- * @sample Select Simple search in select box example.
  */
 gx.bootstrap.Select = new Class({
-
 	gx: 'gx.bootstrap.Select',
-
 	Extends: gx.ui.Container,
-
 	options: {
-		'enableLoader'   : undefined,
-		'disableLoader'  : undefined,
-		'method'         : 'GET',
-		'url'            : 'index.php',
-		'height'         : '200px',
-		'requestData'    : {},
-		'requestParam'   : 'search',
-		'searchFilter'   : undefined,
-		'localOptions'   : null,
+		'height'         : 'auto',
 		'allowEmpty'     : false,
+		'selectionLabel' : false,
 		'icon'           : 'chevron-down',
-
-		/**
-		 * A string to use as the component's label or an object to pass to "Element.set()".
-		 */
-		'label'          : '',
-
-		'orientation'    : 'left',
-		'default'        : '*',
-		'textFormat'     : null,
-		'listFormat'     : function (elem) {
-			return elem.name;
-		},
-		'formatID'       : function (elem) {
-			return elem.Id;
-		},
-		'decodeResponse' : function (json) {
-			return JSON.decode(json);
-		},
-		'reset'          : false,
+		'resetable'      : false,
 		'textboxClass'   : false,
+		'data'           : null,
+		'listFormat'     : null,
+		'elementIndex'   : 'ID',
+		'elementLabel'   : 'name',
+		'elementSelect'  : 'name',
+		'elementDefault' : null,
+		'value'          : null,
 		/* Messages */
 		'msg'            : {
-			'de'         : {
-				'noSelection': 'Keine Auswahl'
-			},
 			'noSelection': 'No Selection'
-		},
-		'requestFunc'    : null
+		}
 	},
-
-	_running   : false,
 	_closed    : true,
-	_lastSearch: false,
 	_selected  : null,
-	_search    : '',
-	elementSelection: null,
+	_currentElem: null,
+	_running   : false,
 
 	initialize: function (display, options) {
 		var root = this;
 		try {
 			this.parent(display, options);
-
-			if (this.options.textFormat == null)
-				this.options.textFormat = this.options.listFormat;
 
 			this._display.root.addClass('bs-select');
 
@@ -3120,8 +3091,10 @@ gx.bootstrap.Select = new Class({
 				}
 			});
 
+			this._display.icon = new Element('span', {'class': 'glyphicon glyphicon-'+this.options.icon});
+
 			this._display.root.adopt([
-				new Element('span', {'class': 'glyphicon glyphicon-'+this.options.icon}),
+				this._display.icon,
 				this._display.textbox,
 				this._display.dropdown
 			]);
@@ -3133,6 +3106,9 @@ gx.bootstrap.Select = new Class({
 				}
 			});
 			this._display.textbox.addEvents({
+				'click': function () {
+					this.show();
+				}.bind(this),
 				'focus': function () {
 					this.show();
 				}.bind(this),
@@ -3140,53 +3116,59 @@ gx.bootstrap.Select = new Class({
 					this.hide.delay(500, root);
 				}.bind(this),
 				'keypress': function (event) {
-					if (event.key == 'up' || event.key == 'down') {
+					if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 						return;
 					}
+					if ( this.search == null )
+						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keydown': function (event) {
-					if (event.key == 'up' || event.key == 'down') {
+					if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 						return;
 					}
+					if ( this.search == null )
+						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keyup': function (event) {
-					if (event.key == 'esc') {
-						this.select();
-					} else if (event.key == 'up' || event.key == 'down') {
+					if ( event.key == 'esc' ) {
+						this.hide();
+					} else if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 
+						this.show();
+
 						var li;
-						if (this.elementSelection == null) {
+						if (this._currentElem == null) {
 							if(event.key == 'down')
-								li = this._display.dropdown.getFirst();
+								li = this._display.dropdown.getFirst(':not(.hidden)');
 							else
-								li = this._display.dropdown.getLast();
+								li = this._display.dropdown.getLast(':not(.hidden)');
 						} else {
 							if(event.key == 'down') {
-								li = this.elementSelection.getNext();
-								if (li == null && this.elementSelection == this._display.dropdown.getLast())
-									li = this._display.dropdown.getFirst();
+								li = this._currentElem.getNext(':not(.hidden)');
+								if (li == null && this._currentElem == this._display.dropdown.getLast(':not(.hidden)'))
+									li = this._display.dropdown.getFirst(':not(.hidden)');
 							} else {
-								li = this.elementSelection.getPrevious();
-								if (li == null && this.elementSelection == this._display.dropdown.getFirst())
-									li = this._display.dropdown.getLast();
+								li = this._currentElem.getPrevious(':not(.hidden)');
+								if (li == null && this._currentElem == this._display.dropdown.getFirst(':not(.hidden)'))
+									li = this._display.dropdown.getLast(':not(.hidden)');
 							}
 						}
 
 						if (li != null) {
-							if (this.elementSelection != null)
-								this.elementSelection.removeClass('active');
-							this.elementSelection = li;
-							this.elementSelection.addClass('active');
-							this.fxScoll.toElement(this.elementSelection);
+							if (this._currentElem != null)
+								this._currentElem.removeClass('selected');
+							this._currentElem = li;
+							this._currentElem.addClass('selected');
+							this.fxScoll.toElement(this._currentElem);
 						}
 
 						return;
-					} else if (event.key == 'enter') {
-						if (this.elementSelection != null) {
-							var a = this.elementSelection.getElement('a');
+					} else if ( event.key == 'enter' ) {
+						if (this._currentElem != null) {
+							var a = this._currentElem.getElement('a');
 							if (a != null)
 								a.fireEvent('click');
 						}
@@ -3194,13 +3176,31 @@ gx.bootstrap.Select = new Class({
 						return;
 					}
 
-					this.search();
+					if ( this.search != null )
+						this.search();
+					else
+						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this)
 			});
 
-			// Overwrite the default request function
-			if (gx.util.isFunction(this.options.requestFunc))
-				this.request = this.options.requestFunc.bind(this);
+			if (gx.util.isFunction(this.options.elementIndex))
+				this.getId = this.options.elementIndex.bind(this);
+
+			if (gx.util.isFunction(this.options.elementLabel))
+				this.getLink = this.options.elementLabel.bind(this);
+
+			if (gx.util.isFunction(this.options.elementSelect))
+				this.showSelection = this.options.elementSelect.bind(this);
+
+			if (gx.util.isArray(this.options.data))
+				this.setData(this.options.data);
+
+			if (this.options.value != null && gx.util.isString(this.options.elementIndex)) {
+				this.options.data.each(function(entry) {
+					if (entry[this.options.elementIndex] == this.options.value)
+						this.set(entry, true);
+				}.bind(this));
+			}
 		} catch(e) {
 			e.message = 'gx.bootstrap.Select: ' + e.message;
 			throw e;
@@ -3208,33 +3208,387 @@ gx.bootstrap.Select = new Class({
 	},
 
 	/**
-	 * @method request
-	 * @description Performs the search request
-	 * @param {object} data
-	 * @returns void
+	 * @method set
+	 * @description Sets the selected element
+	 * @param {object} selection The element to select
+	 * @param {bool} noEvents Do not throw events
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
 	 */
-	request: function(data) {
-		var reqOptions = {
-			'method'   : this.options.method,
-			'url'      : this.options.url,
-			'data'     : data,
-			'onSuccess': function (json) {
-				this.evalResponse(this.options.decodeResponse(json));
-			}.bind(this),
-			'onFailure': function () {
-				// alert('Request failed');
-			}.bind(this)
-		};
+	set: function (selection, noEvents) {
+		this._selected = selection;
+		return this.update(noEvents != false);
+	},
 
-		if ( typeOf(this.options.enableLoader) == 'function' )
-			reqOptions.onRequest = this.options.enableLoader;
+	/**
+	 * @method update
+	 * @description Updates the select box according to its state of selection
+	 * @param {bool} noEvents Do not throw events
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
+	 */
+	update: function (noEvents) {
+		if (noEvents == null || !noEvents)
+			this.fireEvent(this._selected == null ? 'noselect' : 'select', this._selected);
 
-		if ( typeOf(this.options.disableLoader) == 'function' )
-			reqOptions.onComplete = this.options.disableLoader;
+		this.showSelection();
+		this.hide();
 
-		req = new Request(reqOptions);
+		return this;
+	},
 
-		req.send();
+	showSelection: function() {
+		this._display.textbox.set('value', this._selected == null ? '' : this._selected[this.options.elementSelect]);
+	},
+
+	/**
+	 * @method getID
+	 * @description Returns the ID of the selected element
+	 */
+	getId: function (elem) {
+		return elem[this.options.elementIndex];
+	},
+
+	/**
+	 * Returns the element's link
+	 *
+	 * @param  {object} elem
+	 * @return {element}
+	 */
+	getLink: function(elem) {
+		return new Element('a', {'html': elem[this.options.elementLabel]});
+	},
+
+	/**
+	 * @method setData
+	 * @description Builds a list of links from the provided array
+	 * @param {array} list The provided array
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
+	 */
+	setData: function (list) {
+		var root = this;
+		try {
+			this._display.dropdown.empty();
+			this._currentElem = null;
+
+			if (this.options.resetable) {
+				this._display.dropdown.adopt(__({'tag': 'li', 'child':
+					{'tag': 'a', 'class': 'reset', 'html': this.options.resetable, 'onClick': function() {
+						this.set();
+					}.bind(this)}
+				}));
+			}
+
+			var addCLink = function (link, el) {
+				link.addEvent('click', function () {
+					root.set(el);
+				});
+			};
+
+			if ( this.options.elementDefault != null )
+				list = [this.options.elementDefault].append(list);
+
+			var len = list.length;
+
+			for ( i = 0 ; i < len ; i++ ) {
+				var li = new Element('li');
+
+				var contents;
+				if (list[i] == null)
+					continue;
+
+				contents = this.getLink(list[i]);
+
+				var a = this.getLink(list[i]);
+				li.store('data', list[i]);
+				li.store('key', i);
+				this._display.dropdown.adopt(li.adopt(a));
+				addCLink(a, list[i]);
+			}
+		} catch(e) {
+			gx.util.Console('gx.bootstrap.Select->setData', e.message);
+		}
+
+		return this;
+	},
+
+	/**
+	 * @method show
+	 * @description Shows the select box
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
+	 */
+	show: function () {
+		if ( this._display.textbox.disabled )
+			return this;
+
+		this._display.root.addClass('open');
+		this._display.textbox.focus();
+
+		this.fireEvent('show');
+		return this;
+	},
+
+	/**
+	 * @method hide
+	 * @description Hides the select box
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
+	 */
+	hide: function () {
+		if (!this.isOpen())
+			return this;
+
+		this._display.root.removeClass('open');
+		this.clearCursor();
+
+		this.fireEvent('hide');
+		return this.update();
+	},
+
+	/**
+	 * @method isOpen
+	 * @description Returns if the list box is open
+	 * @return {bool}
+	 */
+	isOpen: function() {
+		return this._display.root.hasClass('open');
+	},
+
+	/**
+	 * @method getValue
+	 * @description Alias for getID
+	 */
+	getValue: function () {
+		return this.getId();
+	},
+
+	/**
+	 * @method getSelected
+	 * @description Returns the selected element
+	 */
+	getSelected: function () {
+		return this._selected;
+	},
+
+	/**
+	 * @method clearCursor
+	 * @description Removes the current list selection
+	 */
+	clearCursor: function() {
+		if (this._currentElem == null)
+			return;
+
+		this._currentElem.removeClass('selected');
+		this._currentElem = null;
+	},
+
+	/**
+	 * @method reset
+	 * @description Resets the selection
+	 * @param {bool} noEvents Do not throw events
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
+	 */
+	reset: function (noEvents) {
+		this._display.listbox.empty();
+		this._currentElem = null;
+
+		return this.set(null, noEvents);
+	},
+
+	/**
+	 * @method enable
+	 * @description Enables the text box
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
+	 */
+	enable: function () {
+		this._display.textbox.erase('disabled');
+		return this;
+	},
+
+	/**
+	 * @method disable
+	 * @description Disables the text box
+	 * @returns Returns this instance (for method chaining).
+	 * @type gx.bootstrap.Select
+	 */
+	disable: function () {
+		this._display.textbox.set('disabled', true);
+		return this;
+	}
+});
+
+/**
+ * @class gx.bootstrap.SelectPrio
+ * @description Creates a priority select box
+ * @extends gx.bootstrap.Select
+ */
+gx.bootstrap.SelectPrio = new Class({
+	gx: 'gx.bootstrap.SelectDyn',
+	Extends: gx.bootstrap.Select,
+	options: {
+		elementIndex: 'value',
+		data: [
+			{'value': 0, 'color': '#008000', 'symbol': '■□□□□', 'label': 'lowest'},
+			{'value': 1, 'color': '#ffc000', 'symbol': '■■□□□', 'label': 'low'},
+			{'value': 2, 'color': '#ff8000', 'symbol': '■■■□□', 'label': 'medium'},
+			{'value': 3, 'color': '#ff4000', 'symbol': '■■■■□', 'label': 'high'},
+			{'value': 4, 'color': '#c00000', 'symbol': '■■■■■', 'label': 'highest'}
+		],
+		msg: {
+			'lowest' : 'Lowest',
+			'low'    : 'Low',
+			'medium' : 'Medium',
+			'high'   : 'High',
+			'highest': 'Highest'
+		},
+		value: 0
+	},
+
+	showSelection: function() {
+		this._display.textbox.set('value', this._selected == null ? '' : this._selected.symbol + ' | ' + this.getMessage(this._selected.label));
+	},
+
+	getLink: function(elem) {
+		return new Element('a', {'html': elem.symbol + ' | ' + this.getMessage(elem.label), 'styles': {'color': elem.color}});
+	}
+});
+
+/**
+ * @class gx.bootstrap.SelectFilter
+ * @description Creates a filterable search list
+ * @extends gx.bootstrap.Select
+ * @implements gx.util.Console
+ *
+ * @param  {element|string}  display         The display element
+ * @param  {object}          options
+ *
+ * @option {string}          height          Default: 200px
+ * @option {string}          selectionPrefix An optional prefix displayed in front of the selected value
+ * @option {string}          icon            The glyphikon icon (default: chevron-down)
+ * @option (string)          resetable       If set, add an additional list option to reset the selection (e.g. "Select all")
+ * @option {string}          textboxClass    Additional textbox class
+ * @option {array}           data            Default data
+ * @option {string|function} elementIndex    The ID format (default key is "ID"; specify function to overwrite)
+ * @option {string|function} elementLabel    Element label or alternative list format (Default returns a:"elem.name")
+ * @option {string|function} elementSelect   The label for selected elements or alternative format function
+ * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
+ * @option {string|int}      value           Specifies the default/preset value or simple lists
+ * @option {array}           searchfields    List of searchable object fields inside
+ *
+ */
+gx.bootstrap.SelectFilter = new Class({
+	gx: 'gx.bootstrap.SelectDyn',
+	Extends: gx.bootstrap.Select,
+	options: {
+		'height'      : '200px',
+		'searchfields': ['name']
+	},
+	_lastSearch: '',
+
+	initialize: function (display, options) {
+		var root = this;
+		try {
+			this.addEvent('show', function() {
+				this.search();
+			}.bind(this));
+			this.parent(display, options);
+		} catch(e) {
+			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			throw e;
+		}
+	},
+
+	/**
+	 * @method search
+	 * @description Performs a search
+	 * @param {string} search The search string
+	 * @returns Returns this instance (for method chaining).
+	 */
+	search: function () {
+		try {
+			var query = this._display.textbox.get('value');
+			if (this._lastSearch == query)
+				return;
+
+			this.clearCursor();
+			this._lastSearch = query;
+
+			this._display.dropdown.getElements('li').each(function(li) {
+				var data = li.retrieve('data', {});
+				this.options.searchfields.each(function(field) {
+					if (query == '') {
+						li.removeClass('hidden');
+						return;
+					}
+					switch (typeOf(data[field])) {
+						case 'number':
+							data[field] = data[field].toString();
+						case 'string':
+							if (data[field].test(query, 'i')) {
+								li.removeClass('hidden');
+								return;
+							}
+					}
+					li.addClass('hidden');
+				}.bind(this));
+			}.bind(this));
+		} catch(e) {
+			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			throw e;
+		}
+	}
+});
+
+/**
+ * @class gx.bootstrap.SelectDyn
+ * @description Creates a dynamic select box with searchable conent
+ * @extends gx.bootstrap.Select
+ * @implements gx.util.Console
+ *
+ * @param  {element|string}  display         The display element
+ * @param  {object}          options
+ *
+ * @option {string}          height          Default: 200px
+ * @option {string}          selectionPrefix An optional prefix displayed in front of the selected value
+ * @option {string}          icon            The glyphikon icon (default: chevron-down)
+ * @option (string)          resetable       If set, add an additional list option to reset the selection (e.g. "Select all")
+ * @option {string}          textboxClass    Additional textbox class
+ * @option {array}           data            Default data
+ * @option {string|function} elementIndex    The ID format (default key is "ID"; specify function to overwrite)
+ * @option {string|function} elementLabel    Element label or alternative list format (Default returns a:"elem.name")
+ * @option {string|function} elementSelect   The label for selected elements or alternative format function
+ * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
+ * @option {string|int}      value           Specifies the default/preset value or simple lists
+ *
+ * @event show     When the selection list is shown
+ * @event hide     When the selection list is hidden
+ * @event select   When an element is selected
+ * @event noselect When no element is selected
+ *
+ */
+gx.bootstrap.SelectDyn = new Class({
+	gx: 'gx.bootstrap.SelectDyn',
+	Extends: gx.bootstrap.Select,
+	options: {
+		'height': '200px',
+		'defaultQuery': ''
+	},
+
+	initialize: function (display, options) {
+		var root = this;
+		try {
+			this.addEvent('show', function() {
+				this.search()
+			}.bind(this));
+			this.parent(display, options);
+		} catch(e) {
+			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
+			throw e;
+		}
 	},
 
 	/**
@@ -3249,7 +3603,7 @@ gx.bootstrap.Select = new Class({
 			if ( search == null )
 				search = this._display.textbox.value.trim();
 			if ( search == '' || search == null )
-				search = this.options['default'];
+				search = this.options.defaultQuery;
 
 			if ( search === this._lastSearch ) {
 				// search === this._lastSearch strict comparison is necessary.
@@ -3257,7 +3611,7 @@ gx.bootstrap.Select = new Class({
 				// only '' !== false => results in true
 			} else if ( this.options.localOptions ) {
 				this._lastSearch = search;
-				this.buildList(
+				this.setData(
 					this.options.searchFilter
 					? this.options.searchFilter(this.options.localOptions, this._lastSearch)
 					: this.options.localOptions
@@ -3288,228 +3642,25 @@ gx.bootstrap.Select = new Class({
 	},
 
 	/**
-	 * @method evalResponse
-	 * @description Evaluates the response: Decodes the JSON, calls buildList with the result and then calls search
-	 * @param {string} data
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
+	 * @method showLoader
+	 * @description Show the loader icon
+	 * @return gx.bootstrap.SelectDyn
 	 */
-	evalResponse: function (data) {
-		try {
-			if ( typeOf(data) == 'array' )
-				this.buildList(
-					this.options.searchFilter
-					? this.options.searchFilter(data, this._lastSearch)
-					: data
-				);
-			else
-				gx.util.Console('gx.bootstrap.Select->evalResponse.', 'Invalid object type. Array expected.');
-		} catch(e) { gx.util.Console('gx.bootstrap.Select->evalResponse', gx.util.parseError(e)); }
-
-		this._running = false;
-		this.search();
-	},
-
-	/**
-	 * @method buildList
-	 * @description Builds a list of links from the provided array
-	 * @param {array} list The provided array
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	buildList: function (list) {
-		var root = this;
-		try {
-			this._display.dropdown.empty();
-
-			if (this.options.reset) {
-				this._display.dropdown.adopt(__({'tag': 'li', 'child':
-					{'tag': 'a', 'class': 'reset', 'html': this.options.reset, 'onClick': function() {
-						this.set();
-					}.bind(this)}
-				}));
-			}
-
-			var addCLink = function (link, el) {
-				link.addEvent('click', function () {
-					root.set(el);
-				});
-			};
-
-			if ( this.options.allowEmpty )
-				list = [ null ].append(list);
-
-			var len = list.length;
-
-			for (i = 0 ; i < len ; i++) {
-				var li = new Element('li');
-
-				var contents;
-				if (list[i] == null) {
-					if (gx.util.isString(this.options.allowEmpty))
-						contents = this.options.allowEmpty;
-					else
-						continue;
-				} else {
-					contents = this.options.listFormat(list[i]);
-				}
-
-				var a = gx.util.isElement(contents) ? contents : new Element('a', {'html': contents});
-				this._display.dropdown.adopt(li.adopt(a));
-				addCLink(a, list[i]);
-			}
-		} catch(e) {
-			gx.util.Console('gx.bootstrap.Select->buildList', e.message);
-		}
-
+	showLoader: function() {
+		this._display.icon.setClass('glyphicon glyphicon-refresh');
 		return this;
 	},
 
 	/**
-	 * @method show
-	 * @description Shows the select box
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
+	 * @method hideLoader
+	 * @description Hide the loader icon and restore the default icon
+	 * @return gx.bootstrap.SelectDyn
 	 */
-	show: function () {
-		if ( this._display.textbox.disabled )
-			return this;
-
-		this._display.root.addClass('open');
-		this._display.textbox.set('value', this._search);
-		this._display.textbox.focus();
-		this._closed = false;
-
-		return this.search();
-	},
-
-	/**
-	 * @method hide
-	 * @description Hides the select box
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	hide: function () {
-		if ( this._closed )
-			return this;
-
-		this._display.root.removeClass('open');
-		this._closed = true;
-		this._search = this._display.textbox.value;
-
-		return this.update();
-	},
-
-	/**
-	 * @method update
-	 * @description Updates the select box according to its state of selection
-	 * @param {bool} noEvents Do not throw events
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	update: function (noEvents) {
-		if ( this._selected == null ) {
-			if (noEvents == null || !noEvents)
-				this.fireEvent('noselect');
-			this._display.textbox.erase('value');
-		} else {
-			if (noEvents == null || !noEvents)
-				this.fireEvent('select', this._selected);
-			this._display.textbox.set('value', this.options.textFormat(this._selected));
-		}
-
-		return this;
-	},
-
-	/**
-	 * @method setRequestData
-	 * @param {object} The default request data
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	setRequestData: function (data) {
-		this.options.requestData = data;
-		return this;
-	},
-
-	/**
-	 * @method set
-	 * @description Sets the selected element
-	 * @param {object} selection The element to select
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	set: function (selection) {
-		this._selected = selection;
-		return ( this._closed ? this.update(true) : this.hide() );
-	},
-
-	/**
-	 * @method getID
-	 * @description Returns the ID of the selected element
-	 */
-	getId: function () {
-		return (
-			this._selected == null
-			? undefined
-			: this.options.formatID(this._selected)
-		);
-	},
-
-	/**
-	 * @method getValue
-	 * @description Alias for getID
-	 */
-	getValue: function () {
-		return this.getId();
-	},
-
-	/**
-	 * @method getSelected
-	 * @description Returns the selected element
-	 */
-	getSelected: function () {
-		return this._selected;
-	},
-
-	/**
-	 * @method reset
-	 * @description Resets the selection
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	reset: function () {
-		this._display.listbox.empty();
-
-		this._selected   = null;
-		this._lastSearch = false;
-
-		return this.update();
-	},
-
-	/**
-	 * @method enable
-	 * @description Enables the text box
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	enable: function () {
-		this._display.textbox.erase('disabled');
-		return this;
-	},
-
-	/**
-	 * @method disable
-	 * @description Disables the text box
-	 * @returns Returns this instance (for method chaining).
-	 * @type gx.bootstrap.Select
-	 */
-	disable: function () {
-		this._display.textbox.set('disabled', true);
-		return this;
+	hideLoader: function() {
+		this._display.icon.setClass('glyphicon glyphicon-'+this.options.icon);
 	}
-
 });
+
 ;/**
  * @class gx.bootstrap.Tabbox
  * @description Creates a tabbed box
