@@ -9,10 +9,11 @@
 		color: #4d4d4d;
 		&.glyphicon-refresh {
 			cursor: progress;
-			-webkit-transition: opacity 0.25s, max-width 0.45s;
-			-moz-transition: opacity 0.25s, max-width 0.45s;
-			-o-transition: opacity 0.25s, max-width 0.45s;
-			transition: opacity 0.25s, max-width 0.45s; /* Duration fixed since we animate additional hidden width */
+
+			-webkit-animation: spin 1s linear infinite;
+			-moz-animation: spin 1s linear infinite;
+			-o-transition: spin 1s linear infinite;
+			animation: spin 1s linear infinite;
 		}
 	}
 	>input.form-control {
@@ -41,9 +42,9 @@
 	}
 }
 
-
-
-
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
 
 
 
