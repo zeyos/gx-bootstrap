@@ -597,6 +597,7 @@ gx.bootstrap.SelectDyn = new Class({
 		'queryParam': 'query',
 		'parseDefault': false
 	},
+	_requestChain:[],
 
 	initialize: function (display, options) {
 		var root = this;
@@ -611,7 +612,6 @@ gx.bootstrap.SelectDyn = new Class({
 
 			if (this.options.parseDefault) {
 				this.addEvent('requestSuccess', function(json) {
-					console.log('test2');
 					var r = gx.util.parseResult(json);
 					this.setData(gx.util.isArray(r) ? r : []);
 				}.bind(this))
@@ -629,7 +629,7 @@ gx.bootstrap.SelectDyn = new Class({
 	},
 
 	_searchQuery: function(query) {
-		return (new Request({
+		var r = new Request({
 			'method'   : this.options.method,
 			'url'      : this.options.url,
 			'data'     : this.getRequetData(query),
@@ -638,6 +638,11 @@ gx.bootstrap.SelectDyn = new Class({
 			}.bind(this),
 			'onComplete': function() {
 				this.hideLoader();
+				var next = this._requestChain.pop();
+				if (next != r) {
+					this._requestChain = []; // Reset the chain, only execute the next request
+					next.send();
+				}
 			}.bind(this),
 			'onSuccess': function (json) {
 				this.fireEvent('requestSuccess', json);
@@ -645,7 +650,11 @@ gx.bootstrap.SelectDyn = new Class({
 			'onFailure': function () {
 				this.fireEvent('requestFailure');
 			}.bind(this)
-		})).send();
+		});
+		this._requestChain.push(r);
+
+		if (this._requestChain.length == 1)
+			r.send();
 	}
 });
 
