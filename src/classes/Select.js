@@ -57,7 +57,7 @@ gx.bootstrap.Select = new Class({
 		try {
 			this.parent(display, options);
 
-			this._display.root.addClass('bs-select');
+			this._display.root.addClass('gx-bootstrap-select');
 
 			this._display.textbox = new Element('input', {
 				'type'       : 'text',
@@ -70,7 +70,7 @@ gx.bootstrap.Select = new Class({
 			this._display.dropdown = new Element('ul', {
 				'class': 'dropdown-menu',
 				'styles': {
-					'height': this.options.height
+					'max-height': this.options.height
 				}
 			});
 
@@ -96,7 +96,7 @@ gx.bootstrap.Select = new Class({
 					this.show();
 				}.bind(this),
 				'blur': function () {
-					this.hide.delay(500, root);
+					this.hide.delay(300, root);
 				}.bind(this),
 				'keypress': function (event) {
 					if ( event.key == 'up' || event.key == 'down' ) {
@@ -487,8 +487,7 @@ gx.bootstrap.SelectFilter = new Class({
 
 	/**
 	 * @method search
-	 * @description Performs a search
-	 * @param {string} search The search string
+	 * @description Initiates a search request
 	 * @returns Returns this instance (for method chaining).
 	 */
 	search: function () {
@@ -499,7 +498,21 @@ gx.bootstrap.SelectFilter = new Class({
 
 			this.clearCursor();
 			this._lastSearch = query;
+			this._searchQuery(query);
 
+		} catch(e) {
+			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			throw e;
+		}
+	},
+
+	/**
+	 * @method search
+	 * @description Performs a search
+	 * @returns Returns this instance (for method chaining).
+	 */
+	_searchQuery: function (query) {
+		try {
 			this._display.dropdown.getElements('li').each(function(li) {
 				var data = li.retrieve('data', {});
 				this.options.searchfields.each(function(field) {
@@ -523,6 +536,25 @@ gx.bootstrap.SelectFilter = new Class({
 			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
 			throw e;
 		}
+	},
+
+	/**
+	 * @method showLoader
+	 * @description Show the loader icon
+	 * @return gx.bootstrap.SelectDyn
+	 */
+	showLoader: function() {
+		this._display.icon.set('class', 'glyphicon glyphicon-refresh');
+		return this;
+	},
+
+	/**
+	 * @method hideLoader
+	 * @description Hide the loader icon and restore the default icon
+	 * @return gx.bootstrap.SelectDyn
+	 */
+	hideLoader: function() {
+		this._display.icon.set('class', 'glyphicon glyphicon-'+this.options.icon);
 	}
 });
 
@@ -546,6 +578,9 @@ gx.bootstrap.SelectFilter = new Class({
  * @option {string|function} elementSelect   The label for selected elements or alternative format function
  * @option {object}          elementDefault  Represents a default element, e.g. for "empty" selections
  * @option {string|int}      value           Specifies the default/preset value or simple lists
+ * @option {string}          url             The request URL
+ * @option {string}          method          The request method (default: GET)
+ * @option {string|function} queryParam      The query paramter or a function that returns the request data object (e.g. {search: QUERY, entity: ...})
  *
  * @event show     When the selection list is shown
  * @event hide     When the selection list is hidden
@@ -555,92 +590,62 @@ gx.bootstrap.SelectFilter = new Class({
  */
 gx.bootstrap.SelectDyn = new Class({
 	gx: 'gx.bootstrap.SelectDyn',
-	Extends: gx.bootstrap.Select,
+	Extends: gx.bootstrap.SelectFilter,
 	options: {
-		'height': '200px',
-		'defaultQuery': ''
+		'url': './',
+		'method': 'GET',
+		'queryParam': 'query',
+		'parseDefault': false
 	},
 
 	initialize: function (display, options) {
 		var root = this;
 		try {
-			this.addEvent('show', function() {
-				this.search()
-			}.bind(this));
+			if (options.onRequestSuccess == null)
+				this.options.parseDefault = true;
+
 			this.parent(display, options);
-		} catch(e) {
-			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
-			throw e;
-		}
-	},
 
-	/**
-	 * @method search
-	 * @description Initiates a search request
-	 * @param {string} search The search string
-	 * @returns Returns this instance (for method chaining).
-	 */
-	search: function (search) {
-		var root = this;
-		try {
-			if ( search == null )
-				search = this._display.textbox.value.trim();
-			if ( search == '' || search == null )
-				search = this.options.defaultQuery;
+			if (gx.util.isFunction(this.options.queryParam))
+				this.getRequetData = this.options.queryParam.bind(this);
 
-			if ( search === this._lastSearch ) {
-				// search === this._lastSearch strict comparison is necessary.
-				// Because on focus select: '' != false => results in false -> no search will be executed
-				// only '' !== false => results in true
-			} else if ( this.options.localOptions ) {
-				this._lastSearch = search;
-				this.setData(
-					this.options.searchFilter
-					? this.options.searchFilter(this.options.localOptions, this._lastSearch)
-					: this.options.localOptions
-				);
-
-			} else if ( this._running !== true ) {
-				this.fireEvent('request');
-				this._running = true;
-				this._lastSearch = search;
-				var data = this.options.requestData;
-
-				if ( !this.options.searchFilter ) {
-					if (typeOf(this.options.requestParam) == 'function')
-						data = this.options.requestParam(data, search);
-					else
-						data[this.options.requestParam] = search;
-				}
-
-				// Perform the request
-				this.request(data);
+			if (this.options.parseDefault) {
+				this.addEvent('requestSuccess', function(json) {
+					console.log('test2');
+					var r = gx.util.parseResult(json);
+					this.setData(gx.util.isArray(r) ? r : []);
+				}.bind(this))
 			}
 		} catch(e) {
-			e.message = 'gx.bootstrap.Select: ' + e.message;
+			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
 			throw e;
 		}
-
-		return this;
 	},
 
-	/**
-	 * @method showLoader
-	 * @description Show the loader icon
-	 * @return gx.bootstrap.SelectDyn
-	 */
-	showLoader: function() {
-		this._display.icon.setClass('glyphicon glyphicon-refresh');
-		return this;
+	getRequetData: function(query) {
+		var d = {};
+		d[this.options.queryParam] = query;
+		return d;
 	},
 
-	/**
-	 * @method hideLoader
-	 * @description Hide the loader icon and restore the default icon
-	 * @return gx.bootstrap.SelectDyn
-	 */
-	hideLoader: function() {
-		this._display.icon.setClass('glyphicon glyphicon-'+this.options.icon);
+	_searchQuery: function(query) {
+		return (new Request({
+			'method'   : this.options.method,
+			'url'      : this.options.url,
+			'data'     : this.getRequetData(query),
+			'onRequest': function() {
+				this.showLoader();
+			}.bind(this),
+			'onComplete': function() {
+				this.hideLoader();
+			}.bind(this),
+			'onSuccess': function (json) {
+				this.fireEvent('requestSuccess', json);
+			}.bind(this),
+			'onFailure': function () {
+				this.fireEvent('requestFailure');
+			}.bind(this)
+		})).send();
 	}
 });
 
