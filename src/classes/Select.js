@@ -99,6 +99,8 @@ gx.bootstrap.Select = new Class({
 					this.hide.delay(300, root);
 				}.bind(this),
 				'keypress': function (event) {
+					if ( event.key == 'tab' )
+						return;
 					if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 						return;
@@ -107,6 +109,8 @@ gx.bootstrap.Select = new Class({
 						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keydown': function (event) {
+					if ( event.key == 'tab' )
+						return;
 					if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 						return;
@@ -115,6 +119,9 @@ gx.bootstrap.Select = new Class({
 						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keyup': function (event) {
+					if ( event.key == 'tab' )
+						return;
+
 					if ( event.key == 'esc' ) {
 						this.hide();
 					} else if ( event.key == 'up' || event.key == 'down' ) {
@@ -229,7 +236,13 @@ gx.bootstrap.Select = new Class({
 	 * @description Returns the ID of the selected element
 	 */
 	getId: function (elem) {
-		return elem[this.options.elementIndex];
+		if (elem != null)
+			return elem[this.options.elementIndex];
+
+		if (this._selected != null)
+			return this._selected[this.options.elementIndex];
+
+		return null;
 	},
 
 	/**
@@ -375,9 +388,6 @@ gx.bootstrap.Select = new Class({
 	 * @type gx.bootstrap.Select
 	 */
 	reset: function (noEvents) {
-		this._display.listbox.empty();
-		this._currentElem = null;
-
 		return this.set(null, noEvents);
 	},
 
@@ -410,7 +420,7 @@ gx.bootstrap.Select = new Class({
  * @extends gx.bootstrap.Select
  */
 gx.bootstrap.SelectPrio = new Class({
-	gx: 'gx.bootstrap.SelectDyn',
+	gx: 'gx.bootstrap.SelectPrio',
 	Extends: gx.bootstrap.Select,
 	options: {
 		elementIndex: 'value',

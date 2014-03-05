@@ -191,6 +191,16 @@ gx.bootstrap.Fieldset = new Class({
 	},
 
 	/**
+	 * @method focus
+	 * @description Gets a single field object
+	 * @param fieldid
+	 */
+	focus: function (fieldid) {
+		if (this._fields[fieldid] != null)
+			this._fields[fieldid].focus();
+	},
+
+	/**
 	 * @method getField
 	 * @description Gets a single field object
 	 * @param fieldid

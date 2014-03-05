@@ -504,6 +504,11 @@ gx.bootstrap.Field = new Class({
 
 	getInput: function () {
 		return this._display.field;
+	},
+
+	focus: function() {
+		if (typeOf(this._display.field.focus) == 'function' || typeOf(this._display.field) == 'element')
+			this._display.field.focus();
 	}
 
 });
