@@ -2,7 +2,6 @@
  * @class gx.bootstrap.Select
  * @description Creates a dynamic select box, which dynamically loads the contents from a remote URL
  * @extends gx.ui.Container
- * @implements gx.util.Console
  *
  * @param  {element|string}  display         The display element
  * @param  {object}          options
@@ -36,7 +35,6 @@ gx.bootstrap.Select = new Class({
 		'resetable'      : false,
 		'textboxClass'   : false,
 		'data'           : null,
-		'listFormat'     : null,
 		'elementIndex'   : 'ID',
 		'elementLabel'   : 'name',
 		'elementSelect'  : 'name',
@@ -166,9 +164,10 @@ gx.bootstrap.Select = new Class({
 						return;
 					}
 
-					if ( this.search != null )
+					if ( this.search != null ) {
+						this.show();
 						this.search();
-					else
+					} else
 						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this)
 			});
@@ -221,7 +220,7 @@ gx.bootstrap.Select = new Class({
 		if (noEvents == null || !noEvents)
 			this.fireEvent(this._selected == null ? 'noselect' : 'select', this._selected);
 
-		this.showSelection();
+		this.showSelection(this._selected);
 		this.hide();
 
 		return this;
@@ -290,11 +289,8 @@ gx.bootstrap.Select = new Class({
 			for ( i = 0 ; i < len ; i++ ) {
 				var li = new Element('li');
 
-				var contents;
 				if (list[i] == null)
 					continue;
-
-				contents = this.getLink(list[i]);
 
 				var a = this.getLink(list[i]);
 				li.store('data', list[i]);
@@ -454,7 +450,6 @@ gx.bootstrap.SelectPrio = new Class({
  * @class gx.bootstrap.SelectFilter
  * @description Creates a filterable search list
  * @extends gx.bootstrap.Select
- * @implements gx.util.Console
  *
  * @param  {element|string}  display         The display element
  * @param  {object}          options
@@ -474,13 +469,13 @@ gx.bootstrap.SelectPrio = new Class({
  *
  */
 gx.bootstrap.SelectFilter = new Class({
-	gx: 'gx.bootstrap.SelectDyn',
+	gx: 'gx.bootstrap.SelectFilter',
 	Extends: gx.bootstrap.Select,
 	options: {
 		'height'      : '200px',
 		'searchfields': ['name']
 	},
-	_lastSearch: '',
+	_lastSearch: null,
 
 	initialize: function (display, options) {
 		var root = this;
@@ -572,7 +567,6 @@ gx.bootstrap.SelectFilter = new Class({
  * @class gx.bootstrap.SelectDyn
  * @description Creates a dynamic select box with searchable conent
  * @extends gx.bootstrap.Select
- * @implements gx.util.Console
  *
  * @param  {element|string}  display         The display element
  * @param  {object}          options
@@ -591,6 +585,7 @@ gx.bootstrap.SelectFilter = new Class({
  * @option {string}          url             The request URL
  * @option {string}          method          The request method (default: GET)
  * @option {string|function} queryParam      The query paramter or a function that returns the request data object (e.g. {search: QUERY, entity: ...})
+ * @option {object}          requestData     Default request data
  *
  * @event show     When the selection list is shown
  * @event hide     When the selection list is hidden
@@ -605,15 +600,26 @@ gx.bootstrap.SelectDyn = new Class({
 		'url': './',
 		'method': 'GET',
 		'queryParam': 'query',
-		'parseDefault': false
+		'parseDefault': false,
+		'requestData': {}
 	},
 	_requestChain:[],
+	_firstLoad: false,
 
 	initialize: function (display, options) {
 		var root = this;
 		try {
 			if (options.onRequestSuccess == null)
 				this.options.parseDefault = true;
+
+
+			this.addEvent('show', function() {
+				if (this._firstLoad)
+					return;
+
+				this.search();
+				this._firstLoad = true;
+			}.bind(this));
 
 			this.parent(display, options);
 
@@ -627,29 +633,28 @@ gx.bootstrap.SelectDyn = new Class({
 				}.bind(this))
 			}
 		} catch(e) {
-			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
 			throw e;
 		}
 	},
 
-	getRequetData: function(query) {
-		var d = {};
-		d[this.options.queryParam] = query;
-		return d;
+	getRequetData: function(query, data) {
+		data[this.options.queryParam] = query;
+		return data;
 	},
 
 	_searchQuery: function(query) {
 		var r = new Request({
 			'method'   : this.options.method,
 			'url'      : this.options.url,
-			'data'     : this.getRequetData(query),
+			'data'     : this.getRequetData(query, Object.clone(this.options.requestData)),
 			'onRequest': function() {
 				this.showLoader();
 			}.bind(this),
 			'onComplete': function() {
 				this.hideLoader();
 				var next = this._requestChain.pop();
-				if (next != r) {
+				if (next != null && next != r) {
 					this._requestChain = []; // Reset the chain, only execute the next request
 					next.send();
 				}
