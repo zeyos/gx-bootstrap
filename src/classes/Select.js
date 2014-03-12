@@ -288,15 +288,13 @@ gx.bootstrap.Select = new Class({
 			var len = list.length;
 
 			for ( i = 0 ; i < len ; i++ ) {
-				var li = new Element('li');
-
-				var contents;
 				if (list[i] == null)
 					continue;
 
-				contents = this.getLink(list[i]);
-
+				var li = new Element('li');
+				var contents = this.getLink(list[i]);
 				var a = this.getLink(list[i]);
+
 				li.store('data', list[i]);
 				li.store('key', i);
 				this._display.dropdown.adopt(li.adopt(a));
