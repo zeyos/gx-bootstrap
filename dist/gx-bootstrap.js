@@ -1,8 +1,7 @@
 /**
  * @extends gx.core
  */
-gx.bootstrap = {};
-;/**
+gx.bootstrap = {};;/**
  * @class gx.bootstrap.CheckButton
  * @description Creates a checkbox button
  * @extends gx.ui.Container
@@ -968,8 +967,8 @@ gx.bootstrap.Field = new Class({
 					elem = $(field);
 				}
 
-				if ( this.options.default != null )
-					this.setValue(this.options.default);
+				if ( this.options.value != null )
+					this.setValue(this.options.value);
 				break;
 			default:
 				return;
@@ -1225,6 +1224,11 @@ gx.bootstrap.Field = new Class({
 
 	getInput: function () {
 		return this._display.field;
+	},
+
+	focus: function() {
+		if (typeOf(this._display.field.focus) == 'function' || typeOf(this._display.field) == 'element')
+			this._display.field.focus();
 	}
 
 });
@@ -1834,6 +1838,16 @@ gx.bootstrap.Fieldset = new Class({
 		for (id in this._fields)
 			if (this._fields[id].reset != null)
 				this._fields[id].reset();
+	},
+
+	/**
+	 * @method focus
+	 * @description Gets a single field object
+	 * @param fieldid
+	 */
+	focus: function (fieldid) {
+		if (this._fields[fieldid] != null)
+			this._fields[fieldid].focus();
 	},
 
 	/**
@@ -3019,7 +3033,6 @@ gx.bootstrap.Popup = new Class({
  * @class gx.bootstrap.Select
  * @description Creates a dynamic select box, which dynamically loads the contents from a remote URL
  * @extends gx.ui.Container
- * @implements gx.util.Console
  *
  * @param  {element|string}  display         The display element
  * @param  {object}          options
@@ -3053,7 +3066,6 @@ gx.bootstrap.Select = new Class({
 		'resetable'      : false,
 		'textboxClass'   : false,
 		'data'           : null,
-		'listFormat'     : null,
 		'elementIndex'   : 'ID',
 		'elementLabel'   : 'name',
 		'elementSelect'  : 'name',
@@ -3116,6 +3128,8 @@ gx.bootstrap.Select = new Class({
 					this.hide.delay(300, root);
 				}.bind(this),
 				'keypress': function (event) {
+					if ( event.key == 'tab' )
+						return;
 					if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 						return;
@@ -3124,6 +3138,8 @@ gx.bootstrap.Select = new Class({
 						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keydown': function (event) {
+					if ( event.key == 'tab' )
+						return;
 					if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 						return;
@@ -3132,6 +3148,9 @@ gx.bootstrap.Select = new Class({
 						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this),
 				'keyup': function (event) {
+					if ( event.key == 'tab' )
+						return;
+
 					if ( event.key == 'esc' ) {
 						this.hide();
 					} else if ( event.key == 'up' || event.key == 'down' ) {
@@ -3176,9 +3195,10 @@ gx.bootstrap.Select = new Class({
 						return;
 					}
 
-					if ( this.search != null )
+					if ( this.search != null ) {
+						this.show();
 						this.search();
-					else
+					} else
 						event.preventDefault(); // Do nothing for simple select boxes
 				}.bind(this)
 			});
@@ -3231,7 +3251,7 @@ gx.bootstrap.Select = new Class({
 		if (noEvents == null || !noEvents)
 			this.fireEvent(this._selected == null ? 'noselect' : 'select', this._selected);
 
-		this.showSelection();
+		this.showSelection(this._selected);
 		this.hide();
 
 		return this;
@@ -3246,7 +3266,13 @@ gx.bootstrap.Select = new Class({
 	 * @description Returns the ID of the selected element
 	 */
 	getId: function (elem) {
-		return elem[this.options.elementIndex];
+		if (elem != null)
+			return elem[this.options.elementIndex];
+
+		if (this._selected != null)
+			return this._selected[this.options.elementIndex];
+
+		return null;
 	},
 
 	/**
@@ -3292,15 +3318,13 @@ gx.bootstrap.Select = new Class({
 			var len = list.length;
 
 			for ( i = 0 ; i < len ; i++ ) {
-				var li = new Element('li');
-
-				var contents;
 				if (list[i] == null)
 					continue;
 
-				contents = this.getLink(list[i]);
-
+				var li = new Element('li');
+				var contents = this.getLink(list[i]);
 				var a = this.getLink(list[i]);
+
 				li.store('data', list[i]);
 				li.store('key', i);
 				this._display.dropdown.adopt(li.adopt(a));
@@ -3392,9 +3416,6 @@ gx.bootstrap.Select = new Class({
 	 * @type gx.bootstrap.Select
 	 */
 	reset: function (noEvents) {
-		this._display.listbox.empty();
-		this._currentElem = null;
-
 		return this.set(null, noEvents);
 	},
 
@@ -3427,7 +3448,7 @@ gx.bootstrap.Select = new Class({
  * @extends gx.bootstrap.Select
  */
 gx.bootstrap.SelectPrio = new Class({
-	gx: 'gx.bootstrap.SelectDyn',
+	gx: 'gx.bootstrap.SelectPrio',
 	Extends: gx.bootstrap.Select,
 	options: {
 		elementIndex: 'value',
@@ -3461,7 +3482,6 @@ gx.bootstrap.SelectPrio = new Class({
  * @class gx.bootstrap.SelectFilter
  * @description Creates a filterable search list
  * @extends gx.bootstrap.Select
- * @implements gx.util.Console
  *
  * @param  {element|string}  display         The display element
  * @param  {object}          options
@@ -3481,13 +3501,13 @@ gx.bootstrap.SelectPrio = new Class({
  *
  */
 gx.bootstrap.SelectFilter = new Class({
-	gx: 'gx.bootstrap.SelectDyn',
+	gx: 'gx.bootstrap.SelectFilter',
 	Extends: gx.bootstrap.Select,
 	options: {
 		'height'      : '200px',
 		'searchfields': ['name']
 	},
-	_lastSearch: '',
+	_lastSearch: null,
 
 	initialize: function (display, options) {
 		var root = this;
@@ -3579,7 +3599,6 @@ gx.bootstrap.SelectFilter = new Class({
  * @class gx.bootstrap.SelectDyn
  * @description Creates a dynamic select box with searchable conent
  * @extends gx.bootstrap.Select
- * @implements gx.util.Console
  *
  * @param  {element|string}  display         The display element
  * @param  {object}          options
@@ -3598,6 +3617,7 @@ gx.bootstrap.SelectFilter = new Class({
  * @option {string}          url             The request URL
  * @option {string}          method          The request method (default: GET)
  * @option {string|function} queryParam      The query paramter or a function that returns the request data object (e.g. {search: QUERY, entity: ...})
+ * @option {object}          requestData     Default request data
  *
  * @event show     When the selection list is shown
  * @event hide     When the selection list is hidden
@@ -3612,15 +3632,26 @@ gx.bootstrap.SelectDyn = new Class({
 		'url': './',
 		'method': 'GET',
 		'queryParam': 'query',
-		'parseDefault': false
+		'parseDefault': false,
+		'requestData': {}
 	},
 	_requestChain:[],
+	_firstLoad: false,
 
 	initialize: function (display, options) {
 		var root = this;
 		try {
 			if (options.onRequestSuccess == null)
 				this.options.parseDefault = true;
+
+
+			this.addEvent('show', function() {
+				if (this._firstLoad)
+					return;
+
+				this.search();
+				this._firstLoad = true;
+			}.bind(this));
 
 			this.parent(display, options);
 
@@ -3634,29 +3665,28 @@ gx.bootstrap.SelectDyn = new Class({
 				}.bind(this))
 			}
 		} catch(e) {
-			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
 			throw e;
 		}
 	},
 
-	getRequetData: function(query) {
-		var d = {};
-		d[this.options.queryParam] = query;
-		return d;
+	getRequetData: function(query, data) {
+		data[this.options.queryParam] = query;
+		return data;
 	},
 
 	_searchQuery: function(query) {
 		var r = new Request({
 			'method'   : this.options.method,
 			'url'      : this.options.url,
-			'data'     : this.getRequetData(query),
+			'data'     : this.getRequetData(query, Object.clone(this.options.requestData)),
 			'onRequest': function() {
 				this.showLoader();
 			}.bind(this),
 			'onComplete': function() {
 				this.hideLoader();
 				var next = this._requestChain.pop();
-				if (next != r) {
+				if (next != null && next != r) {
 					this._requestChain = []; // Reset the chain, only execute the next request
 					next.send();
 				}
@@ -4099,95 +4129,3 @@ gx.bootstrap.ValueList = new Class({
 	}
 
 });
-;/**
- * @class gx.bootstrap.Field
- * @description Creates a single field for a gx.bootstrap.Field and gx.bootstrap.Form
- * @extends gx.ui.Container
- *
- * @param {element|string} display The display element
- *
- * @option {string} label The title for the fieldset
- * @option {object} type The field type: text, password, file, checkbox, select
- * @option {object} default The default value
- * @option {string} description The field description
- * @option {string} hightlight The default highlight class (error, warning, success)
- */
-gx.bootstrap.VersionField = new Class({
-
-	gx: 'gx.bootstrap.VersionField',
-
-	Extends: gx.ui.Container,
-
-	options: {
-
-	},
-
-	_display: {},
-
-	initialize: function(options) {
-		var root = this;
-		try {
-            this.parent(null, options);
-            this._display.major = this.createSelect(1, 9);
-            this._display.minor = this.createSelect(0, 99);
-            this._display.maintenance = this.createSelect(0, 9);
-			this._display.root.adopt(
-                this._display.major,
-                this._display.minor,
-                this._display.maintenance
-            );
-
-            this._display.major.addEvent('change', function(event){
-				root.fireEvent('change', [event]);
-			});
-            this._display.minor.addEvent('change', function(event){
-				root.fireEvent('change', [event]);
-			});
-            this._display.maintenance.addEvent('change', function(event){
-				root.fireEvent('change', [event]);
-			});
-
-		} catch(e) { gx.util.Console('gx.bootstrap.VersionField->initialize', e.message); }
-	},
-	/**
-	 * @method getValue
-	 * @description Get the current field value
-	 * @return {string|bool|null}
-	 */
-	getValue: function() {
-        return this._display.major.get('value') + this._display.minor.get('value') + this._display.maintenance.get('value');
-	},
-	/**
-	 * @method setValue
-	 * @description Sets a single form value
-	 * @param {mixed} value
-	 */
-	setValue: function(version) {
-        version = version+'';
-        this._display.major.selectedIndex = version.substr(0,1) - 1;
-        this._display.minor.selectedIndex = version.substr(1,2);
-        this._display.maintenance.selectedIndex = version.substr(3,1);
-	},
-	/**
-	 * @method createSelect
-	 * @description Helper to create select elements
-	 * @param {mixed} value
-	 */
-    createSelect: function(from, to) {
-        var select = new Element('select.form-control', {'style': 'width:80px; display: inline;'});
-        var add = (''+to).length;
-        for ( i = from; i <= to; i++ ){
-            var value = ''+i;
-            while ( value.length < add ) {
-                value = '0' + value;
-            }
-            select.adopt(new Element('option', {'value': value, 'html': value}));
-        }
-        return select;
-    }
-});
-
-gx.bootstrap.VersionField.format = function(version) {
-    version = version + '';
-    return version.substr(0,1) + '.' + version.substr(1,2) + '-' + version.substr(3,1);
-}
