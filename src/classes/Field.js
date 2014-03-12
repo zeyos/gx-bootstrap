@@ -247,8 +247,8 @@ gx.bootstrap.Field = new Class({
 					elem = $(field);
 				}
 
-				if ( this.options.default != null )
-					this.setValue(this.options.default);
+				if ( this.options.value != null )
+					this.setValue(this.options.value);
 				break;
 			default:
 				return;
