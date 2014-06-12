@@ -1,7 +1,7 @@
-Gx ZeyOS Components
-===================
+Gx Bootstrap Components
+=======================
 
-Gx is an extensible component library built on MooTools. The ZeyOS module includes various components for building add-on for ZeyOS.
+Gx is an extensible component library built on MooTools. The ZeyOS module includes various components for building add-on for Bootstrap.
 
 
 Demos
