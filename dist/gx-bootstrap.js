@@ -3222,7 +3222,7 @@ gx.bootstrap.Select = new Class({
 				}.bind(this));
 			}
 		} catch(e) {
-			e.message = 'gx.bootstrap.Select: ' + e.message;
+			e.message = 'gx.bootstrap.Select->initialize: ' + e.message;
 			throw e;
 		}
 	},
@@ -3331,7 +3331,8 @@ gx.bootstrap.Select = new Class({
 				addCLink(a, list[i]);
 			}
 		} catch(e) {
-			gx.util.Console('gx.bootstrap.Select->setData', e.message);
+			e.message = 'gx.bootstrap.Select->setData: ' + e.message;
+			throw e;
 		}
 
 		return this;
@@ -3517,7 +3518,7 @@ gx.bootstrap.SelectFilter = new Class({
 			}.bind(this));
 			this.parent(display, options);
 		} catch(e) {
-			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			e.message = 'gx.bootstrap.SelectFilter->initialize: ' + e.message;
 			throw e;
 		}
 	},
@@ -3538,7 +3539,7 @@ gx.bootstrap.SelectFilter = new Class({
 			this._searchQuery(query);
 
 		} catch(e) {
-			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			e.message = 'gx.bootstrap.SelectFilter->search: ' + e.message;
 			throw e;
 		}
 	},
@@ -3570,7 +3571,7 @@ gx.bootstrap.SelectFilter = new Class({
 				}.bind(this));
 			}.bind(this));
 		} catch(e) {
-			e.message = 'gx.bootstrap.SelectFilter: ' + e.message;
+			e.message = 'gx.bootstrap.SelectFilter->_searchQuery: ' + e.message;
 			throw e;
 		}
 	},
@@ -3665,7 +3666,7 @@ gx.bootstrap.SelectDyn = new Class({
 				}.bind(this))
 			}
 		} catch(e) {
-			e.message = 'gx.bootstrap.SelectDyn: ' + e.message;
+			e.message = 'gx.bootstrap.SelectDyn->initialize: ' + e.message;
 			throw e;
 		}
 	},
@@ -3837,18 +3838,27 @@ gx.bootstrap.Tabbox = new Class({
  * @option {bool} onComplete when the table is rendered completely
  */
 gx.bootstrap.Table = new Class({
-	gx: 'gx.bootstrap.Table',
-	Extends: gx.ui.Table,
+    gx     : 'gx.bootstrap.Table',
+    Extends: gx.ui.Table,
 
-	_theme: {
-		'asc': 'asc',
-		'desc': 'desc',
-		'th': 'th',
-		'filter': 'filter',
-		'table_body': 'fixed table table-striped table-hover',
-		'table_head': 'fullw table-head',
-		'filter_elem': 'span'
-	}
+    _theme: {
+        filterAsc   : 'asc',
+        filterDesc  : 'desc',
+        unfiltered  : '',
+        th          : 'th',
+        filter      : 'filter',
+        filterElem  : 'span',
+        mainTable   : 'fixed table table-striped table-hover',
+        mainThead   : 'fullw table-head',
+        mainTheadRow: '',
+        mainTbody   : '',
+        wrapper     : '',
+        emptyCol    : '',
+        headerTable : '',
+        tbodyTr     : '',
+        oddRow      : false,
+        colCheck    : 'table-col-check'
+    }
 });
 ;/**
  * @class gx.bootstrap.Timebox
