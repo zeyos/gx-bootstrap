@@ -25,16 +25,25 @@
  * @option {bool} onComplete when the table is rendered completely
  */
 gx.bootstrap.Table = new Class({
-	gx: 'gx.bootstrap.Table',
-	Extends: gx.ui.Table,
+    gx     : 'gx.bootstrap.Table',
+    Extends: gx.ui.Table,
 
-	_theme: {
-		'asc': 'asc',
-		'desc': 'desc',
-		'th': 'th',
-		'filter': 'filter',
-		'table_body': 'fixed table table-striped table-hover',
-		'table_head': 'fullw table-head',
-		'filter_elem': 'span'
-	}
+    _theme: {
+        filterAsc   : 'asc',
+        filterDesc  : 'desc',
+        unfiltered  : '',
+        th          : 'th',
+        filter      : 'filter',
+        filterElem  : 'span',
+        mainTable   : 'fixed table table-striped table-hover',
+        mainThead   : 'fullw table-head',
+        mainTheadRow: '',
+        mainTbody   : '',
+        wrapper     : '',
+        emptyCol    : '',
+        headerTable : '',
+        tbodyTr     : '',
+        oddRow      : false,
+        colCheck    : 'table-col-check'
+    }
 });
