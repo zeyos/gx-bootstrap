@@ -33,7 +33,7 @@ gx.bootstrap.Message = new Class({
 		var root = this;
 		this.parent(display, options);
 		this._messages = new Array();
-		this._display.windows = new Element('div', {'class': 'gxMessage', 'styles': {
+		this._display.windows = new Element('div', {'class': 'gx-bootstrap-message', 'styles': {
 			'width': root.options.messageWidth,
 			'margin-top': this.options.margintop,
 			'position': 'absolute',
@@ -55,21 +55,21 @@ gx.bootstrap.Message = new Class({
 	addMessage: function(msg, iconClass, closable, blend, autoclose) {
 		var root = this;
 		var elem = new Element('div', {
-			'class': 'bs-message alert alert-'+(iconClass == null ? 'info' : iconClass), 
+			'class': 'bs-message alert alert-'+(iconClass == null ? 'info' : iconClass),
 			'styles': {
 				'position': 'static',
 				'opacity': 0,
 				'z-index': root.options['z-index']+2
 			}
 		});
-		
+
 		if (closable != false) {
 			var closeX = new Element('x', {'class': 'close', 'html': '×'})
 			elem.adopt(closeX);
 			closeX.addEvent('click', function() {
 				root.closeMessage(elem);
 			});
-		}		
+		}
 
 		switch (typeOf(msg)) {
 			case 'element':
@@ -95,7 +95,7 @@ gx.bootstrap.Message = new Class({
 				// elem.set('html', msg);
 				break;
 		}
-		
+
 		this._display.windows.adopt(elem);
 		var tween = new Fx.Morph(elem, {'duration': 'short'})
 		if (blend == true) this.showBlend();
@@ -152,7 +152,7 @@ gx.bootstrap.Message = new Class({
 	 */
 	showStatus: function(progress, message, blend) {
 		if (this._display.status == null) {
-			var stat = new Element('div', {'class': 'gxMessageStatus'});
+			var stat = new Element('div', {'class': 'gx-bootstrap-message-status'});
 			this._display.status = this.addMessage(stat, null, false, blend, false)
 			this._statusbar = new gx.com.Statusbar(stat, {
 				'message': message,

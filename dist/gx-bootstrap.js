@@ -1,7 +1,7 @@
 /**
  * @extends gx.core
  */
-gx.bootstrap = {};;/**
+gx.bootstrap = {};/**
  * @class gx.bootstrap.CheckButton
  * @description Creates a checkbox button
  * @extends gx.ui.Container
@@ -150,7 +150,7 @@ gx.bootstrap.CheckButton = new Class({
 		this._display.indicator.disabled = enable;
 		this._display.button.disabled = enable;
 	}
-});;/**
+});/**
  * @class gx.bootstrap.Checklist
  * @description Creates a checklist control and loads the contents from a remote URL.
  * @extends gx.ui.Container
@@ -399,7 +399,7 @@ gx.bootstrap.Checklist = new Class({
 		} catch(e) { gx.util.Console('gx.bootstrap.Checklist->loadFromUrl', e.message); }
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.DataFilter
  * @description Client side data filtering.
  * @extends gx.core.Settings
@@ -718,7 +718,7 @@ gx.bootstrap.DataFilter = new Class({
 		return null;
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.Field
  * @description Creates a single field for a gx.bootstrap.Field and gx.bootstrap.Form
  * @extends gx.ui.Container
@@ -1232,7 +1232,7 @@ gx.bootstrap.Field = new Class({
 	}
 
 });
-;/**
+/**
  * @class gx.bootstrap.FieldImgUpload
  * @description Creates a image upload field. Images has fixed height and width. Returned value always null. Handle saving by upload form server side!
  * @extends gx.bootstrap.Field
@@ -1648,7 +1648,7 @@ gx.bootstrap.FieldUpload = new Class({
 			this.setHighlight();
 		}).delay(2000, this);
 	}
-});;/**
+});/**
  * @class gx.bootstrap.Fieldset
  * @description Creates a fieldset
  * @extends gx.ui.Container
@@ -1954,7 +1954,7 @@ gx.bootstrap.Fieldset = new Class({
 	}
 
 });
-;/**
+/**
  * @class gx.bootstrap.Form
  * @description Creates a fieldset
  * @extends gx.ui.Container
@@ -2165,7 +2165,7 @@ gx.bootstrap.Form = new Class({
 		});
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.MenuButton
  * @description Creates a checkbox button
  * @extends gx.ui.Container
@@ -2292,7 +2292,7 @@ gx.bootstrap.MenuButton = new Class({
 		this._style = style;
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.Message
  * @description Displays a message box or status bar.
  * @extends gx.ui.Hud
@@ -2327,7 +2327,7 @@ gx.bootstrap.Message = new Class({
 		var root = this;
 		this.parent(display, options);
 		this._messages = new Array();
-		this._display.windows = new Element('div', {'class': 'gxMessage', 'styles': {
+		this._display.windows = new Element('div', {'class': 'gx-bootstrap-message', 'styles': {
 			'width': root.options.messageWidth,
 			'margin-top': this.options.margintop,
 			'position': 'absolute',
@@ -2349,21 +2349,21 @@ gx.bootstrap.Message = new Class({
 	addMessage: function(msg, iconClass, closable, blend, autoclose) {
 		var root = this;
 		var elem = new Element('div', {
-			'class': 'bs-message alert alert-'+(iconClass == null ? 'info' : iconClass), 
+			'class': 'bs-message alert alert-'+(iconClass == null ? 'info' : iconClass),
 			'styles': {
 				'position': 'static',
 				'opacity': 0,
 				'z-index': root.options['z-index']+2
 			}
 		});
-		
+
 		if (closable != false) {
 			var closeX = new Element('x', {'class': 'close', 'html': '×'})
 			elem.adopt(closeX);
 			closeX.addEvent('click', function() {
 				root.closeMessage(elem);
 			});
-		}		
+		}
 
 		switch (typeOf(msg)) {
 			case 'element':
@@ -2389,7 +2389,7 @@ gx.bootstrap.Message = new Class({
 				// elem.set('html', msg);
 				break;
 		}
-		
+
 		this._display.windows.adopt(elem);
 		var tween = new Fx.Morph(elem, {'duration': 'short'})
 		if (blend == true) this.showBlend();
@@ -2446,7 +2446,7 @@ gx.bootstrap.Message = new Class({
 	 */
 	showStatus: function(progress, message, blend) {
 		if (this._display.status == null) {
-			var stat = new Element('div', {'class': 'gxMessageStatus'});
+			var stat = new Element('div', {'class': 'gx-bootstrap-message-status'});
 			this._display.status = this.addMessage(stat, null, false, blend, false)
 			this._statusbar = new gx.com.Statusbar(stat, {
 				'message': message,
@@ -2492,7 +2492,7 @@ gx.bootstrap.Message = new Class({
 			this._statusbar.setProgress(progress, message, tween);
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.MultiValueEditor
  * @description Creates a multi value editor to edit values with multiple sub-values (array)
  * @extends gx.ui.Container
@@ -2644,7 +2644,7 @@ gx.bootstrap.MultiValueEditor = new Class({
 	}
 
 });
-;/**
+/**
  * @class gx.bootstrap.NavigationBar
  * @description Creates a tabbed navigation box
  * @extends gx.ui.Tabbox
@@ -2795,7 +2795,7 @@ gx.bootstrap.NavigationBar = new Class({
 		}
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.Popup
  * @description Displays a message box or status bar.
  * @extends gx.ui.Blend
@@ -3029,7 +3029,7 @@ gx.bootstrap.Popup = new Class({
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->hide: ', e.message); }
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.Select
  * @description Creates a dynamic select box, which dynamically loads the contents from a remote URL
  * @extends gx.ui.Container
@@ -3706,7 +3706,7 @@ gx.bootstrap.SelectDyn = new Class({
 	}
 });
 
-;/**
+/**
  * @class gx.bootstrap.Tabbox
  * @description Creates a tabbed box
  * @extends gx.ui.Tabbox
@@ -3811,7 +3811,7 @@ gx.bootstrap.Tabbox = new Class({
 		}
 	}
 });
-;/**
+/**
  * @class gx.bootstrap.Table
  * @description Creates a dynamic select box, which dynamically loads the contents from a remote URL.
  * @extends gx.ui.Table
@@ -3860,7 +3860,7 @@ gx.bootstrap.Table = new Class({
         colCheck    : 'table-col-check'
     }
 });
-;/**
+/**
  * @class gx.bootstrap.Timebox
  * @description Creates a box for times, separating hours, minutes and seconds
  * @extends gx.ui.Container
@@ -4015,7 +4015,7 @@ gx.bootstrap.Timebox = new Class({
 	}
 
 });
-;'use strict';
+'use strict';
 
 /**
  * @class gx.bootstrap.ValueList
