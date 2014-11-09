@@ -35,18 +35,18 @@
         {'tag': 'h5', 'html': 'gx.bootstrap.Table'},
         {'class': 'b-1', 'child': Table.display()},
         {'class': 'p-10 bg-E', 'children': {
-            btnTableEmpty : {'tag': 'button', 'class': 'm_r-5', 'html': 'Empty', 'onClick': function() {
+            btnTableEmpty : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Empty', 'onClick': function() {
                 Table.empty();
             }},
-            btnTableSet : {'tag': 'button', 'class': 'm_r-5', 'html': 'Set data', 'onClick': function() {
+            btnTableSet : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Set data', 'onClick': function() {
                 Table.setData(data);
             }},
-            btnAddData : {'tag': 'button', 'class': 'm_r-5', 'html': 'Add data', 'onClick': function() {
+            btnAddData : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Add data', 'onClick': function() {
                 var temp = Array.clone(data);
-                temp.push({'customername': 'Another One', 'customernum': '1003943295792836012345719837632809467', 'lastmodified': '1220454105'});
+                temp.push({'customername': 'Another One', 'customernum': '12102', 'lastmodified': '1220454105'});
                 Table.setData(temp);
             }},
-            btnGetSelection : {'tag': 'button', 'html': 'Get selection', 'onClick': function() {
+            btnGetSelection : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Get selection (console)', 'onClick': function() {
                 console.log(Table.getSelection());
             }}
         }}

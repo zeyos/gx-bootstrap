@@ -29,6 +29,13 @@ Generates a table
 @@include('demos/Table.demo.js')
 ```
 
+### gx.bootstrap.CheckButton ###
+
+Generates a table
+
+```js
+@@include('demos/CheckButton.demo.js')
+
 Usage
 -----
 

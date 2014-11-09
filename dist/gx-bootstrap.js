@@ -30,6 +30,8 @@ gx.bootstrap.CheckButton = new Class({
 	class_unchecked: 'btn-warning',
 	_checked: false,
 	_disabled: false,
+    _labelActive: false,
+    _labelInactive: false,
 	initialize: function(display, options) {
 		var root = this;
 		try {
@@ -53,12 +55,12 @@ gx.bootstrap.CheckButton = new Class({
 				root.toggle();
 			});
 
+            this.setLabel(this.options.label);
+
 			if (this.options.value)
 				this.check(1);
 			else
 				this.uncheck(1);
-
-			this.setLabel(this.options.label);
 		} catch(e) { gx.util.Console('gx.bootstrap.CheckButton->initialize', e.message); }
 	},
 
@@ -68,7 +70,14 @@ gx.bootstrap.CheckButton = new Class({
 	 * @param {string} label
 	 */
 	setLabel: function(label) {
-		this._display.button.set('html', label);
+        if (typeOf(label) == 'array') {
+            this._labelInactive = label.pop();
+            this._labelActive = label.pop();
+            return;
+        }
+		
+        this._labelInactive = label;
+        this._labelActive = label;
 	},
 
 	/**
@@ -106,7 +115,9 @@ gx.bootstrap.CheckButton = new Class({
 		this._display.indicator.removeClass(this.class_unchecked);
 		this._display.indicator.addClass(this.class_checked);
 		this._display.indicator.set('html', '&nbsp;<span class="glyphicon glyphicon-ok"></span>');
+        this._display.button.set('html', this._labelActive);
 		this._checked = true;
+
 		if (suppress == null || !suppress) {
 			this.fireEvent('change', true);
 			this.fireEvent('check');
@@ -125,6 +136,7 @@ gx.bootstrap.CheckButton = new Class({
 		this._display.indicator.removeClass(this.class_checked);
 		this._display.indicator.addClass(this.class_unchecked);
 		this._display.indicator.set('html', '&nbsp;<span class="glyphicon glyphicon-remove"></span>');
+        this._display.button.set('html', this._labelInactive);
 		this._checked = false;
 		if (suppress == null || !suppress) {
 			this.fireEvent('change', false);

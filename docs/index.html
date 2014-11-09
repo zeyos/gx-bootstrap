@@ -64,7 +64,7 @@
 			{'class': 'pad-5', 'child': SelectDyn}
 		]},
 		{'class': 'p-10 bg-E', 'children': {
-			btnSelectValue : {'tag': 'button', 'class': 'btn btn-primary', 'html': 'Get selection', 'onClick': function() {
+			btnSelectValue : {'tag': 'button', 'class': 'btn btn-primary mright-10', 'html': 'Get selection', 'onClick': function() {
 				alert(JSON.encode(SelectFilter.getSelected()));
 			}},
 			btnSelectReset : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Reset', 'onClick': function() {
@@ -114,19 +114,47 @@
         {'tag': 'h5', 'html': 'gx.bootstrap.Table'},
         {'class': 'b-1', 'child': Table.display()},
         {'class': 'p-10 bg-E', 'children': {
-            btnTableEmpty : {'tag': 'button', 'class': 'm_r-5', 'html': 'Empty', 'onClick': function() {
+            btnTableEmpty : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Empty', 'onClick': function() {
                 Table.empty();
             }},
-            btnTableSet : {'tag': 'button', 'class': 'm_r-5', 'html': 'Set data', 'onClick': function() {
+            btnTableSet : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Set data', 'onClick': function() {
                 Table.setData(data);
             }},
-            btnAddData : {'tag': 'button', 'class': 'm_r-5', 'html': 'Add data', 'onClick': function() {
+            btnAddData : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Add data', 'onClick': function() {
                 var temp = Array.clone(data);
-                temp.push({'customername': 'Another One', 'customernum': '1003943295792836012345719837632809467', 'lastmodified': '1220454105'});
+                temp.push({'customername': 'Another One', 'customernum': '12102', 'lastmodified': '1220454105'});
                 Table.setData(temp);
             }},
-            btnGetSelection : {'tag': 'button', 'html': 'Get selection', 'onClick': function() {
+            btnGetSelection : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Get selection (console)', 'onClick': function() {
                 console.log(Table.getSelection());
+            }}
+        }}
+    ]}));
+})();
+
+
+            /* gx.bootstrap.CheckButton
+             -------------------------------------- */
+            (function () {
+    var CheckButton = new gx.bootstrap.CheckButton(null, {
+        size: 'lg', // The Bootstrap size modifier (lg: large, xs: small)
+        value: 1,
+        label: ['I am checked', 'I am unchecked']
+    });
+
+    // Demo Injection
+    $(document.body).adopt(__({'children': [
+        {'tag': 'h5', 'html': 'gx.bootstrap.CheckButton'},
+        {'class': 'pad-10', 'children': [
+            {'tag': 'label', 'html': 'Selection demo:'},
+            {'class': 'pad-5', 'child': CheckButton}
+        ]},
+        {'class': 'p-10 bg-E', 'children': {
+            btnCheckGetValue : {'tag': 'button', 'class': 'btn btn-primary mright-10', 'html': 'Get value', 'onClick': function() {
+                alert(CheckButton.get() ? 'Checked' : 'Unchecked');
+            }},
+            btnCheckToggle : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Toggle value', 'onClick': function() {
+                CheckButton.toggle();
             }}
         }}
     ]}));

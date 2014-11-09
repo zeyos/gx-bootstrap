@@ -23,7 +23,7 @@
 			{'class': 'pad-5', 'child': SelectDyn}
 		]},
 		{'class': 'p-10 bg-E', 'children': {
-			btnSelectValue : {'tag': 'button', 'class': 'btn btn-primary', 'html': 'Get selection', 'onClick': function() {
+			btnSelectValue : {'tag': 'button', 'class': 'btn btn-primary mright-10', 'html': 'Get selection', 'onClick': function() {
 				alert(JSON.encode(SelectFilter.getSelected()));
 			}},
 			btnSelectReset : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Reset', 'onClick': function() {
