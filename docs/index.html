@@ -160,6 +160,25 @@
     ]}));
 })();
 
+
+            /* gx.bootstrap.CheckButton
+             -------------------------------------- */
+            (function() {
+    var Popup = new gx.bootstrap.Popup({
+        'content'    : 'Test'
+    });
+
+    // Demo Injection
+    $(document.body).adopt(__({'children': [
+        {'tag': 'h5', 'html': 'gx.bootstrap.Popup'},
+        {'class': 'p-10 bg-E', 'children': {
+            btnTableEmpty : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Open popup', 'onClick': function() {
+                Popup.show();
+            }}
+        }}
+    ]}));
+})();
+
 		});
 	</script>
 

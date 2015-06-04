@@ -35,6 +35,16 @@ Generates a table
 
 ```js
 @@include('demos/CheckButton.demo.js')
+```
+
+### gx.bootstrap.Popup ###
+
+Generates a table
+
+```js
+@@include('demos/Popup.demo.js')
+```
+
 
 Usage
 -----
