@@ -125,7 +125,7 @@ gx.bootstrap.Select = new Class({
 					} else if ( event.key == 'up' || event.key == 'down' ) {
 						event.preventDefault();
 
-						this.show();
+						// this.show();
 
 						var li;
 						if (this._currentElem == null) {
@@ -165,7 +165,7 @@ gx.bootstrap.Select = new Class({
 					}
 
 					if ( this.search != null ) {
-						this.show();
+						// this.show();
 						this.search();
 					} else
 						event.preventDefault(); // Do nothing for simple select boxes
@@ -220,14 +220,14 @@ gx.bootstrap.Select = new Class({
 		if (noEvents == null || !noEvents)
 			this.fireEvent(this._selected == null ? 'noselect' : 'select', this._selected);
 
-		this.showSelection(this._selected);
+        this._display.textbox.set('placeholder', this.showSelection(this._selected));
 		this.hide();
 
 		return this;
 	},
 
-	showSelection: function() {
-		this._display.textbox.set('value', this._selected == null ? '' : this._selected[this.options.elementSelect]);
+	showSelection: function(selection) {
+        return selection == null ? '('+this.getMessage('noSelection')+')' : selection[this.options.elementSelect];
 	},
 
 	/**
@@ -477,14 +477,19 @@ gx.bootstrap.SelectFilter = new Class({
 		'height'      : '200px',
 		'searchfields': ['name']
 	},
-	_lastSearch: null,
+	_lastSearch: '',
 
 	initialize: function (display, options) {
 		var root = this;
 		try {
 			this.addEvent('show', function() {
+                this._display.textbox.set('value', this._lastSearch);
 				this.search();
 			}.bind(this));
+            this.addEvent('hide', function() {
+                this._display.textbox.erase('value');
+            }.bind(this));
+
 			this.parent(display, options);
 		} catch(e) {
 			e.message = 'gx.bootstrap.SelectFilter->initialize: ' + e.message;

@@ -39,58 +39,104 @@
 		window.addEvent('domready', function() {
 			/* gx.bootstrap.Select
 			-------------------------------------- */
-			(function () {
-	var SelectPrio = new gx.bootstrap.SelectPrio();
+			(function() {
+    var SelectPrio = new gx.bootstrap.SelectPrio();
 
-	var SelectFilter = new gx.bootstrap.SelectFilter();
-	(new Request({url: './data/select.json', onSuccess: function(json) {
-		SelectFilter.setData(JSON.decode(json));
-	}})).send();
+    var SelectFilter = new gx.bootstrap.SelectFilter();
+    (new Request({
+        url: './data/select.json',
+        onSuccess: function(json) {
+            SelectFilter.setData(JSON.decode(json));
+        }
+    })).send();
 
-	var SelectDyn = new gx.bootstrap.SelectDyn(null, {
-		'url': window.location.href.substring(0, window.location.href.lastIndexOf("/")+1) + 'data/select.php',
-		'onRequestSuccess': function(json) {
-			this.setData(JSON.decode(json));
-		}
-	});
+    var SelectDyn = new gx.bootstrap.SelectDyn(null, {
+        'url': window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1) + 'data/select.php',
+        'onRequestSuccess': function(json) {
+            this.setData(JSON.decode(json));
+        }
+    });
 
-	// Demo Injection
-	$(document.body).adopt(__({'children': [
-		{'tag': 'h5', 'html': 'gx.bootstrap.Select'},
-		{'class': 'pad-10', 'children': [
-			{'tag': 'label', 'html': 'Selection demo:'},
-			{'class': 'pad-5', 'child': SelectPrio},
-			{'class': 'pad-5', 'child': SelectFilter},
-			{'class': 'pad-5', 'child': SelectDyn}
-		]},
-		{'class': 'p-10 bg-E', 'children': {
-			btnSelectValue : {'tag': 'button', 'class': 'btn btn-primary mright-10', 'html': 'Get selection', 'onClick': function() {
-				alert(JSON.encode(SelectFilter.getSelected()));
-			}},
-			btnSelectReset : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Reset', 'onClick': function() {
-				SelectFilter.set();
-			}}
-		}}
-	]}));
+    // Demo Injection
+    $(document.body).adopt(__({
+        'children': [{
+            'tag': 'h5',
+            'html': 'gx.bootstrap.Select'
+        }, {
+            'class': 'pad-10',
+            'children': [{
+                'tag': 'label',
+                'html': 'Selection demo:'
+            }, {
+                'class': 'pad-5',
+                'child': SelectPrio
+            }, {
+                'class': 'pad-5',
+                'child': SelectFilter
+            }, {
+                'class': 'pad-5',
+                'child': SelectDyn
+            }]
+        }, {
+            'class': 'p-10 bg-E',
+            'children': {
+                btnSelectValue: {
+                    'tag': 'button',
+                    'class': 'btn btn-primary mright-10',
+                    'html': 'Get selection',
+                    'onClick': function() {
+                        alert(JSON.encode(SelectFilter.getSelected()));
+                    }
+                },
+                btnSelectReset: {
+                    'tag': 'button',
+                    'class': 'btn btn-default',
+                    'html': 'Reset',
+                    'onClick': function() {
+                        SelectFilter.set();
+                    }
+                }
+            }
+        }]
+    }));
 })();
-
 
             /* gx.bootstrap.Table
              -------------------------------------- */
             (function() {
-    var data = [
-        {'customername': 'HyperFlyer', 'customernum': '1003', 'lastmodified': '1220454105'},
-        {'customername': 'InScreen Design', 'customernum': '1004', 'lastmodified': '1220454283'},
-        {'customername': 'GlobalSpin Travel Agency', 'customernum': '1005', 'lastmodified': '1220454466'},
-        {'customername': 'nTronic AG', 'customernum': '1001', 'lastmodified': '1220453517'},
-        {'customername': 'CleanTexx', 'customernum': '1002', 'lastmodified': '1220454105'}
-    ];
+    var data = [{
+        'customername': 'HyperFlyer',
+        'customernum': '1003',
+        'lastmodified': '1220454105'
+    }, {
+        'customername': 'InScreen Design',
+        'customernum': '1004',
+        'lastmodified': '1220454283'
+    }, {
+        'customername': 'GlobalSpin Travel Agency',
+        'customernum': '1005',
+        'lastmodified': '1220454466'
+    }, {
+        'customername': 'nTronic AG',
+        'customernum': '1001',
+        'lastmodified': '1220453517'
+    }, {
+        'customername': 'CleanTexx',
+        'customernum': '1002',
+        'lastmodified': '1220454105'
+    }];
     var Table = new gx.bootstrap.Table(null, {
-        'cols': [
-            {'label': 'Name', 'id': 'customername'},
-            {'label': 'Number', 'id': 'customernum', 'text-align': 'right'},
-            {'label': 'Last change', 'id': 'lastmodified'}
-        ],
+        'cols': [{
+            'label': 'Name',
+            'id': 'customername'
+        }, {
+            'label': 'Number',
+            'id': 'customernum',
+            'text-align': 'right'
+        }, {
+            'label': 'Last change',
+            'id': 'lastmodified'
+        }],
         'structure': function(row) {
             return [
                 row.customername,
@@ -110,32 +156,62 @@
     });
 
     // Demo Injection
-    $(document.body).adopt(__({'children': [
-        {'tag': 'h5', 'html': 'gx.bootstrap.Table'},
-        {'class': 'b-1', 'child': Table.display()},
-        {'class': 'p-10 bg-E', 'children': {
-            btnTableEmpty : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Empty', 'onClick': function() {
-                Table.empty();
-            }},
-            btnTableSet : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Set data', 'onClick': function() {
-                Table.setData(data);
-            }},
-            btnAddData : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Add data', 'onClick': function() {
-                var temp = Array.clone(data);
-                temp.push({'customername': 'Another One', 'customernum': '12102', 'lastmodified': '1220454105'});
-                Table.setData(temp);
-            }},
-            btnGetSelection : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Get selection (console)', 'onClick': function() {
-                console.log(Table.getSelection());
-            }}
-        }}
-    ]}));
+    $(document.body).adopt(__({
+        'children': [{
+            'tag': 'h5',
+            'html': 'gx.bootstrap.Table'
+        }, {
+            'class': 'b-1',
+            'child': Table.display()
+        }, {
+            'class': 'p-10 bg-E',
+            'children': {
+                btnTableEmpty: {
+                    'tag': 'button',
+                    'class': 'btn btn-default mright-10',
+                    'html': 'Empty',
+                    'onClick': function() {
+                        Table.empty();
+                    }
+                },
+                btnTableSet: {
+                    'tag': 'button',
+                    'class': 'btn btn-default mright-10',
+                    'html': 'Set data',
+                    'onClick': function() {
+                        Table.setData(data);
+                    }
+                },
+                btnAddData: {
+                    'tag': 'button',
+                    'class': 'btn btn-default mright-10',
+                    'html': 'Add data',
+                    'onClick': function() {
+                        var temp = Array.clone(data);
+                        temp.push({
+                            'customername': 'Another One',
+                            'customernum': '12102',
+                            'lastmodified': '1220454105'
+                        });
+                        Table.setData(temp);
+                    }
+                },
+                btnGetSelection: {
+                    'tag': 'button',
+                    'class': 'btn btn-default',
+                    'html': 'Get selection (console)',
+                    'onClick': function() {
+                        console.log(Table.getSelection());
+                    }
+                }
+            }
+        }]
+    }));
 })();
-
 
             /* gx.bootstrap.CheckButton
              -------------------------------------- */
-            (function () {
+            (function() {
     var CheckButton = new gx.bootstrap.CheckButton(null, {
         size: 'lg', // The Bootstrap size modifier (lg: large, xs: small)
         value: 1,
@@ -143,42 +219,75 @@
     });
 
     // Demo Injection
-    $(document.body).adopt(__({'children': [
-        {'tag': 'h5', 'html': 'gx.bootstrap.CheckButton'},
-        {'class': 'pad-10', 'children': [
-            {'tag': 'label', 'html': 'Selection demo:'},
-            {'class': 'pad-5', 'child': CheckButton}
-        ]},
-        {'class': 'p-10 bg-E', 'children': {
-            btnCheckGetValue : {'tag': 'button', 'class': 'btn btn-primary mright-10', 'html': 'Get value', 'onClick': function() {
-                alert(CheckButton.get() ? 'Checked' : 'Unchecked');
-            }},
-            btnCheckToggle : {'tag': 'button', 'class': 'btn btn-default', 'html': 'Toggle value', 'onClick': function() {
-                CheckButton.toggle();
-            }}
-        }}
-    ]}));
+    $(document.body).adopt(__({
+        'children': [{
+            'tag': 'h5',
+            'html': 'gx.bootstrap.CheckButton'
+        }, {
+            'class': 'pad-10',
+            'children': [{
+                'tag': 'label',
+                'html': 'Selection demo:'
+            }, {
+                'class': 'pad-5',
+                'child': CheckButton
+            }]
+        }, {
+            'class': 'p-10 bg-E',
+            'children': {
+                btnCheckGetValue: {
+                    'tag': 'button',
+                    'class': 'btn btn-primary mright-10',
+                    'html': 'Get value',
+                    'onClick': function() {
+                        alert(CheckButton.get() ? 'Checked' : 'Unchecked');
+                    }
+                },
+                btnCheckToggle: {
+                    'tag': 'button',
+                    'class': 'btn btn-default',
+                    'html': 'Toggle value',
+                    'onClick': function() {
+                        CheckButton.toggle();
+                    }
+                }
+            }
+        }]
+    }));
 })();
-
 
             /* gx.bootstrap.CheckButton
              -------------------------------------- */
             (function() {
-    var Popup = new gx.bootstrap.Popup({
-        'content'    : 'Test'
+
+    var popup = new gx.bootstrap.Popup({
+        "title": "Header",
+        "content": "Body",
+        "footer": new Element("button", {
+            "class": "btn btn-warning",
+            "text": "close"
+        }).addEvent("click", function() {
+            popup.hide();
+        })
     });
 
-    // Demo Injection
-    $(document.body).adopt(__({'children': [
-        {'tag': 'h5', 'html': 'gx.bootstrap.Popup'},
-        {'class': 'p-10 bg-E', 'children': {
-            btnTableEmpty : {'tag': 'button', 'class': 'btn btn-default mright-10', 'html': 'Open popup', 'onClick': function() {
-                Popup.show();
-            }}
-        }}
-    ]}));
+    (document.body).adopt(__({
+        "children": [{
+            'tag': 'h5',
+            'html': 'gx.bootstrap.popup'
+        }, {
+            'class': 'pad-10',
+            'children': [{
+                'class': 'btn btn-warning',
+                'tag': "button",
+                'text': "Popup",
+                'onClick': function() {
+                    popup.show();
+                }
+            }]
+        }]
+    }))
 })();
-
 		});
 	</script>
 
