@@ -35,12 +35,12 @@ gx.bootstrap.PopupMeta = new (function() {
 		this.popups.push(popup);
 		this.zindex = this.zindex + 2;
 		return this.zindex;
-	}
+	};
 
 	this.unregister = function(popup) {
 		this.popups.erase(popup);
 		return this.popups.length;
-	}
+	};
 
 	window.addEvent('domready', function() {
 		$(document.body).addEvent('keyup', function(event) {
@@ -72,7 +72,8 @@ gx.bootstrap.Popup = new Class({
 		'borderbox'  : true,
 		'maxHeight'  : 'auto',
 		'minHeight'  : 'auto',
-		'clickable'  : false
+		'clickable'  : false,
+		'destroyOnHide': false,
 	},
 	isOpen: false,
 	initialize: function(options) {
@@ -81,6 +82,18 @@ gx.bootstrap.Popup = new Class({
 			this.parent(options);
 
 			this.build();
+
+			if ( this.options.destroyOnHide === true ) {
+				var popup = this;
+				this.addEvent('hide', function() {
+					(function() {
+						popup.destroy();
+						popup = null;
+
+					}).delay(150);
+				});
+			}
+
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->initialize: ', e.message); }
 	},
 
@@ -110,8 +123,8 @@ gx.bootstrap.Popup = new Class({
 			this._display.header.adopt([this._display.cross, this._display.title]);
 
 			// Adjust the default width (600px)
-			if (this.options['width'])
-				this._display.dialog.setStyle('width', this.options['width']);
+			if (this.options.width)
+				this._display.dialog.setStyle('width', this.options.width);
 
 			// Adopt the content
 			if (this.options.content)
@@ -120,8 +133,10 @@ gx.bootstrap.Popup = new Class({
 			// Set the footer
 			if (typeOf(this.options.footer) == 'array')
 				this._display.footer.adopt(this.options.footer);
-			else
+			else if ( this.options.footer )
 				this._display.footer.adopt(__(this.options.footer));
+			else
+				this._display.footer.destroy();
 
 			// Set the title
 			this.setTitle(this.options.title);
@@ -135,6 +150,9 @@ gx.bootstrap.Popup = new Class({
 			} else {
 				this._display.cross.destroy();
 			}
+
+			if ( this.options.type )
+				this._display.header.addClass('text-' + this.options.type);
 
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->build', e.message); }
 	},
@@ -230,5 +248,100 @@ gx.bootstrap.Popup = new Class({
 			this.isOpen = false;
 			this.fireEvent('hide');
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->hide: ', e.message); }
+	},
+
+	destroy: function() {
+		this._display.modal.destroy();
+		this._display.backdrop.destroy();
+		delete this._display;
+
+		this.parent();
 	}
 });
+
+gx.bootstrap.PopupAlert = function(title, msg, options) {
+	if ( typeof options === 'string' )
+		options = {type: options};
+
+	options = Object.merge({
+		title: title,
+		content: msg,
+		width: 400,
+		destroyOnHide: true
+	}, options || {});
+
+	var okBtn = new Element('button', {
+		'html': 'Ok',
+		'class': 'btn btn-primary'
+	});
+
+	options.footer = okBtn;
+
+	var popup = new gx.bootstrap.Popup(options);
+	popup.show();
+
+	return new Promise(function(resolve, reject) {
+		okBtn.addEvent('click', function() {
+			if ( typeof options.onOk === 'function' )
+				if ( options.onOk() === false )
+					return;
+
+			popup.hide();
+			resolve();
+		});
+
+		okBtn.focus();
+	});
+};
+
+/*const*/ gx.bootstrap.PopupConfirmCanceled = {};
+
+gx.bootstrap.PopupConfirm = function(title, msg, options) {
+	if ( typeof options === 'string' )
+		options = {type: options};
+
+	options = Object.merge({
+		title: title,
+		content: msg,
+		width: 400,
+		destroyOnHide: true,
+		modal: true,
+		onOk: false,
+	}, options || {});
+
+	var okBtn = new Element('button', {
+		'html': 'Ok',
+		'class': 'btn btn-primary'
+	});
+
+	var cancelBtn = new Element('button', {
+		'html': 'Cancel',
+		'class': 'btn btn-default'
+	});
+
+	options.footer = [cancelBtn, okBtn];
+
+	var popup = new gx.bootstrap.Popup(options);
+	popup.show();
+
+	return new Promise(function(resolve, reject) {
+		cancelBtn.addEvent('click', function() {
+			popup.hide();
+			resolve(gx.bootstrap.PopupConfirmCanceled);
+		});
+
+		okBtn.addEvent('click', function() {
+			if ( typeof options.onOk === 'function' )
+				if ( options.onOk() === false )
+					return;
+
+			popup.hide();
+			resolve();
+		});
+
+		if ( document && document.activeElement && typeof document.activeElement.blur === 'function' ) {
+			document.activeElement.blur();
+		}
+
+	});
+};
