@@ -206,6 +206,10 @@ gx.bootstrap.Select = new Class({
 	 */
 	set: function (selection, noEvents) {
 		this._selected = selection;
+
+		// This conforms to vanilla js reading value like input.value.
+		this.value = this.getId();
+
 		return this.update(noEvents != false);
 	},
 
@@ -220,14 +224,18 @@ gx.bootstrap.Select = new Class({
 		if (noEvents == null || !noEvents)
 			this.fireEvent(this._selected == null ? 'noselect' : 'select', this._selected);
 
-        this._display.textbox.set('placeholder', this.showSelection(this._selected));
+		this.showSelection(this._selected);
 		this.hide();
 
 		return this;
 	},
 
-	showSelection: function(selection) {
-        return selection == null ? '('+this.getMessage('noSelection')+')' : selection[this.options.elementSelect];
+	showSelection: function() {
+		this._display.textbox.set('value', this.getSelectionDisplayValue());
+	},
+
+	getSelectionDisplayValue: function() {
+		return this._selected == null ? '' : this._selected[this.options.elementSelect];
 	},
 
 	/**
@@ -291,7 +299,6 @@ gx.bootstrap.Select = new Class({
 					continue;
 
 				var li = new Element('li');
-				var contents = this.getLink(list[i]);
 				var a = this.getLink(list[i]);
 
 				li.store('data', list[i]);
@@ -409,6 +416,10 @@ gx.bootstrap.Select = new Class({
 	disable: function () {
 		this._display.textbox.set('disabled', true);
 		return this;
+	},
+
+	toElement: function() {
+		return this._display.root;
 	}
 });
 
@@ -477,7 +488,7 @@ gx.bootstrap.SelectFilter = new Class({
 		'height'      : '200px',
 		'searchfields': ['name']
 	},
-	_lastSearch: '',
+	_lastSearch: null,
 
 	initialize: function (display, options) {
 		var root = this;
@@ -506,6 +517,10 @@ gx.bootstrap.SelectFilter = new Class({
 		try {
 			var query = this._display.textbox.get('value');
 			if (this._lastSearch == query)
+				return;
+
+			var selectionDisplayValue = this.getSelectionDisplayValue();
+			if ( this._selected && query == selectionDisplayValue )
 				return;
 
 			this.clearCursor();
@@ -608,7 +623,8 @@ gx.bootstrap.SelectDyn = new Class({
 		'method': 'GET',
 		'queryParam': 'query',
 		'parseDefault': false,
-		'requestData': {}
+		'requestData': {},
+		'requestHeader': {},
 	},
 	_requestChain:[],
 	_firstLoad: false,
@@ -655,6 +671,7 @@ gx.bootstrap.SelectDyn = new Class({
 			'method'   : this.options.method,
 			'url'      : this.options.url,
 			'data'     : this.getRequetData(query, Object.clone(this.options.requestData)),
+			'header'   : this.options.requestHeader,
 			'onRequest': function() {
 				this.showLoader();
 			}.bind(this),
@@ -677,6 +694,88 @@ gx.bootstrap.SelectDyn = new Class({
 
 		if (this._requestChain.length == 1)
 			r.send();
+	}
+});
+
+
+gx.bootstrap.SelectDynREST = new Class({
+	gx: 'gx.bootstrap.SelectDyn',
+	Extends: gx.bootstrap.SelectFilter,
+	options: {
+		'entity': '',
+		'requestData': {},
+		'limit': 50,
+	},
+	_requestChain:[],
+	_firstLoad: false,
+
+	data: null,
+
+	initialize: function (display, options) {
+		if (options.onRequestSuccess == null)
+			this.options.parseDefault = true;
+
+
+		this.addEvent('show', function() {
+			if (this._firstLoad)
+				return;
+
+			this.search();
+			this._firstLoad = true;
+		}.bind(this));
+
+		this.parent(display, options);
+	},
+
+	_searchQuery: function(searchText) {
+		this.showLoader();
+
+		gx.zeyosREST.Factory.getRESTmodel()
+			.listQuery(this.options.entity)
+			.limit(this.options.limit)
+			.search(searchText)
+			.run()
+			.then(function(res) {
+				this.hideLoader();
+				this.data = res.result;
+				this.setData(res.result);
+
+			}.bind(this))
+			.catch(function(e) {
+				this.hideLoader();
+				throw e;
+			}.bind(this));
+	},
+
+	setEntityId: function(id) {
+		var item;
+		if ( this.data ) {
+			item = this.data.findBy('ID', id);
+		}
+
+		if ( item ) {
+			this.set(item);
+			return Promise.resolve();
+		}
+
+		if ( !id )
+			return Promise.resolve();
+
+		this.showLoader();
+		return gx.zeyosREST.Factory.getRESTmodel()
+			.itemQuery(this.options.entity, id)
+			.run()
+			.then(function(res) {
+				this.hideLoader();
+				if ( res && typeOf(res.result) ) {
+					this.set(res.result);
+				}
+
+			}.bind(this))
+			.catch(function(e) {
+				this.hideLoader();
+				throw e;
+			}.bind(this));
 	}
 });
 
