@@ -2178,6 +2178,379 @@ gx.bootstrap.Form = new Class({
 	}
 });
 /**
+ * @class gx.bootstrap.Grid
+ * @description Helper class to create easy bootstrap grids (container-fluid).
+ * @extends gx.core.Settings
+ *
+ */
+gx.bootstrap.Grid = new Class({
+  Extends: gx.core.Settings,
+
+  AT_ROOT: 1,
+  AT_ROW: 2,
+  AT_CELL: 3,
+
+  options: {
+    classes: ['md'], // Can be array of one or more of 'xs' | 'sm' | 'md' | 'lg' (bootstrap)
+    rowLength: 12,
+    automatedRows: true,
+    nested: false,
+  },
+
+  /*
+  isAt: null,
+  rowLength: null,
+  current: null,
+  */
+  parentGrid: null,
+  initialize: function(display, options, parentGrid) {
+    this.parentGrid = parentGrid;
+
+    if ( typeof options === 'string' )
+      options = {classes: [options]};
+
+    this.parent(options);
+
+    if ( typeof this.options.classes === 'string' )
+      this.options.classes = [this.options.classes];
+
+    this.parseClasses(this.options.classes);
+
+    if ( !display )
+      display = new Element('div');
+
+    if ( this.options.nested !== true )
+      display.addClass('container-fluid');
+
+    this.root = display;
+
+    this.isAt = this.AT_ROOT;
+    this.current = this.root;
+    this.options.rowLength = parseInt(this.options.rowLength);
+    this.rowLength = this.options.rowLength;
+  },
+
+  toParent: function() {
+    return this.parentGrid;
+  },
+
+  grid: function(display, options) {
+    if ( typeof options === 'string' )
+      options = {classes: [options]};
+
+    var nestedGrid = new gx.bootstrap.Grid(display, Object.merge({}, this.options, {nested: true}, options || {}), this);
+    this.current.adopt(nestedGrid);
+
+    return nestedGrid;
+  },
+
+  row: function() {
+    var parent = this.current;
+
+    if ( this.isAt === this.AT_CELL )
+      parent = this.root;
+    else if ( this.isAt === this.AT_ROW )
+      parent = parent.getParent();
+
+    this.current = new Element('div.row');
+    this.isAt = this.AT_ROW;
+    this.rowLength = 0;
+
+    parent.adopt(this.current);
+    return this;
+  },
+
+  /**
+   * Get current row or create one if none exists.
+   * @return {Element}
+   */
+  currentRow: function() {
+    if ( this.isAt === this.AT_CELL )
+      return this.current.getParent();
+    else if ( this.isAt === this.AT_ROW )
+      return this.current;
+
+    return this.row();
+  },
+
+  /**
+   * Allowing various notions for grid columns classes and width. Like:
+   * (3, '4:xs', '5', 'xs:6')
+   * =>
+   *
+   * [3]
+   * [4, "xs"]
+   * ["5"]
+   * [6, "xs"]
+   *
+   * @param  {[type]} arg
+   * @return {[type]}
+   */
+  parseCellClassesFromPrimitive: function(arg) {
+    if ( typeof arg === 'number' )
+      return [arg];
+
+    var s = String(arg).split(':');
+    var l = s[0];
+    var r = s[1];
+
+    if ( !r )
+      return [l];
+
+    var lp = parseInt(l);
+    if ( !Number.isNaN(lp) ) {
+      return [lp, r];
+    }
+
+    return [
+      parseInt(r),
+      l,
+    ];
+  },
+
+  cell: function() {
+    var cell = new Element('div');
+    var arg, type, sizes = [], children = [];
+
+    var i, l;
+
+    if ( arguments.length > 0 ) {
+      for ( i = 0, l = arguments.length; i < l; i++ ) {
+        arg = arguments[i];
+        type = typeof arg;
+        if ( type === 'number' )
+          sizes.push([arg]);
+        else if ( type === 'string' )
+          sizes.push(this.parseCellClassesFromPrimitive(arg));
+        else {
+          children.push(arg);
+        }
+      }
+    }
+
+    if ( children.length > 0 )
+      cell.adopt(children);
+
+    if ( sizes.length === 0 )
+      sizes.push([this.options.rowLength - this.rowLength]);
+
+    var size;
+    for ( i = 0, l = sizes.length; i < l; i++ ) {
+      size = sizes[i];
+      this.applyClasses(size[0], cell, size[1] ? this.parseClasses(size[1]) : null);
+    }
+
+    size = sizes[0];
+
+    if ( this.options.automatedRows && this.rowLength >= this.options.rowLength ) {
+      this.row();
+    }
+
+    var parent = this.current;
+    if ( this.isAt === this.AT_CELL )
+      parent = parent.getParent();
+    else if ( this.isAt === this.AT_ROOT )
+      parent = this.row();
+
+    this.isAt = this.AT_CELL;
+    this.rowLength += parseInt(size);
+    this.current = cell;
+
+    parent.adopt(this.current);
+    return this;
+  },
+
+  toElement: function() {
+    return this.root;
+  },
+
+  applyClasses: function(size, element, classes) {
+    var i = 0;
+    classes = classes || this.options.classes;
+    var l = classes.length;
+    for ( ; i < l; i++ ) {
+      element.addClass(classes[i] + size);
+    }
+  },
+
+  parseClasses: function(classes) {
+    if ( typeof classes === 'string' )
+      return ['col-' + classes + '-'];
+
+    classes.forEach(function(name, index) {
+      classes[index] = 'col-' + name + '-';
+    });
+
+    return classes;
+  }
+});
+/**
+ * File providing general purpose html templates.
+ *
+ */
+(function() {
+  'use strict';
+
+var arrSlice = Array.prototype.slice;
+
+var Templates = gx.ui.Templates;
+
+/**
+ * Bootstrap icon
+ *
+ */
+Templates.register('icon', function(e, d) {
+  return e('span', '.=glyphicon glyphicon-' + d, arrSlice.call(arguments, 2));
+});
+
+/**
+ * Bootstrap button
+ *
+ */
+Templates.register('button', function(e, d) {
+  if ( typeof d === 'string' )
+    d = {type: d};
+
+  return e(d.tag || 'button',
+
+    d.label || '',
+    '.=btn btn-' + (d.type || 'primary') + ' ' + (d.className || ''),
+    d.ref ? ':=' + d.ref : null,
+    arrSlice.call(arguments, 2)
+  );
+});
+
+
+/**
+ * Bootstrap panel.
+ *
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Panel title</h3>
+  </div>
+  <div class="panel-body">
+    Panel content
+  </div>
+</div>
+
+  */
+Templates.register('panel', function(e, d) {
+  var head = null;
+
+  if ( d.head ) {
+    head = e('div', '.=panel-heading',
+      e('h3', '.=panel-title', d.head)
+    );
+  }
+
+  return e('div', '.=panel panel-' + (d.type || 'default'),
+    head,
+    e('div', '.=panel-body',
+      d.body || arrSlice.call(arguments, 2)
+    )
+  );
+});
+
+/**
+ * Bootstrap form group.
+ *
+ * options {
+ *    controlElement {Element} To provide your own form control element
+ *    type {string} Form control element type
+ *    ref {string} Id of the input element AND the value to store a reference to
+ *        that very control: this._ui.inputField_myRefId
+ *
+ *    value
+ *    label {string} Text string
+ *    labelHtml {string} Html string
+ *    placeholder
+ *
+ *    fullEmptyLabel {boolean} Add full with emtpy label. E.g. to properly
+ *        place buttons in a horizontal form.
+ * }
+ *
+ */
+Templates.register('formGroup', function(e, d) {
+  var id = d.ref || '';
+
+  var label = e('label', '.=control-label', {'for': id});
+  if ( d.label === false )
+    label = null;
+  else if ( d.label )
+    label.appendText(String(d.label).htmlSpecialChars());
+  else if ( d.labelHtml )
+    label.set('html', d.labelHtml);
+
+  if ( d.fullEmptyLabel )
+    label.set('html', '&nbsp;').setStyle('width', '100%');
+
+  var inputTag = 'input';
+  if ( d.type === 'textarea' )
+    inputTag = 'textarea';
+  else if ( d.type === 'select')
+    inputTag = 'select';
+
+  var control;
+  if ( d.controlElement ) {
+    var obj = d.controlElement;
+    control = $(d.controlElement);
+
+  } else {
+    control = e(inputTag,
+      id ? ':=inputField_' + id : null,
+      '.=form-control', {
+      value: d.value || '',
+      type: d.type || 'text',
+      'placeholder': d.placeholder || '',
+    });
+  }
+
+  if ( d.name )
+    control.set('name', d.name);
+  if ( d.id )
+    control.set('name', d.id);
+  if ( d.class )
+    control.addClass(d.class);
+
+  if (inputTag === 'select') {
+    for ( var val in d.options ) {
+      if ( !d.options.hasOwnProperty(val) )
+        continue;
+
+      control.adopt(e('option', d.options[val], {'value': val}));
+    }
+  }
+
+  return e('div', '.=form-group',
+    label,
+    control,
+    arrSlice.call(arguments, 2)
+  );
+});
+
+/**
+ * Zeyos svg icon.
+ */
+Templates.register('zeyosSvgIcon', function(e, d) {
+  var icon = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
+  icon.setAttribute('viewBox', '0 0 64 64');
+  var pathElement = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+
+  var path;
+  if ( d === 'inventory' )
+    path = 'M51.5,6.1l-11.2,4.1,1.6,4.2-6,2.2-1.6-4.2-11.2,4.1c-0.9,0.3-1.3,1.2-1,2.1l10.3,28.3c0.3,0.9,1.2,1.3,2.1,1l11.2-4.1-1.6-4.2,6-2.2,1.6,4.2,11.2-4.1c0.9-0.3,1.3-1.2,1-2.1l-10.3-28.3c-0.3-0.9-1.2-1.4-2.1-1zm-14.4,49.9l-1.5-4,21.5-7.8,1.5,4-21.5,7.8zm-10.7-5.8c-3.7,1.4-5.6,5.4-4.2,9.1s5.4,5.6,9.1,4.2,5.6-5.4,4.2-9.1-5.4-5.5-9.1-4.2zm3.7,10.1c-1.9,0.7-3.9-0.3-4.7-2.1s0.3-3.9,2.1-4.7c1.9-0.7,3.9,0.3,4.7,2.1,0.8,1.9-0.2,4-2.1,4.7zm-29.4-54.8l-0.7,4.2,10,1.8,14,38.6,4.1-1.5-14.8-40.9-12.6-2.2z';
+  else if ( d === 'storage' )
+    path = 'M60.995,4h-57.99c-0.57419,0-1.0048,0.4306-1.0048,1.0048v57.99c0,0.57378,0.4306,1.0048,1.0048,1.0048h57.99c0.57379,0,1.0048-0.431,1.0048-1.005v-57.99c0.144-0.43058-0.287-1.0048-1.005-1.0048zm-1.005,2.1531v26.842h-55.837v-26.842h55.837zm-23.253,55.837h-9.4737v-20.526h9.4737v20.526zm2.1531,0v-21.531c0-0.57416-0.43064-1.0048-1.0048-1.0048h-11.627c-0.57415,0-1.0048,0.43062-1.0048,1.0048v21.53h-21.1v-26.842h55.837v26.842h-21.1zm-28.565-49.952,8.3254,0,0,14.354-8.3254,0zm17.368,0,8.3254,0,0,14.354-8.3254,0zm17.512,0,8.3254,0,0,14.354-8.3254,0zm0,28.421,8.3254,0,0,14.354-8.3254,0zm-34.88,0,8.3254,0,0,14.354-8.3254,0z';
+
+  pathElement.setAttribute('d', path);
+  icon.appendChild(pathElement);
+
+  return icon;
+});
+
+})();
+/**
  * @class gx.bootstrap.MenuButton
  * @description Creates a checkbox button
  * @extends gx.ui.Container
@@ -2844,12 +3217,12 @@ gx.bootstrap.PopupMeta = new (function() {
 		this.popups.push(popup);
 		this.zindex = this.zindex + 2;
 		return this.zindex;
-	}
+	};
 
 	this.unregister = function(popup) {
 		this.popups.erase(popup);
 		return this.popups.length;
-	}
+	};
 
 	window.addEvent('domready', function() {
 		$(document.body).addEvent('keyup', function(event) {
@@ -2881,7 +3254,8 @@ gx.bootstrap.Popup = new Class({
 		'borderbox'  : true,
 		'maxHeight'  : 'auto',
 		'minHeight'  : 'auto',
-		'clickable'  : false
+		'clickable'  : false,
+		'destroyOnHide': false,
 	},
 	isOpen: false,
 	initialize: function(options) {
@@ -2890,6 +3264,18 @@ gx.bootstrap.Popup = new Class({
 			this.parent(options);
 
 			this.build();
+
+			if ( this.options.destroyOnHide === true ) {
+				var popup = this;
+				this.addEvent('hide', function() {
+					(function() {
+						popup.destroy();
+						popup = null;
+
+					}).delay(150);
+				});
+			}
+
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->initialize: ', e.message); }
 	},
 
@@ -2919,8 +3305,8 @@ gx.bootstrap.Popup = new Class({
 			this._display.header.adopt([this._display.cross, this._display.title]);
 
 			// Adjust the default width (600px)
-			if (this.options['width'])
-				this._display.dialog.setStyle('width', this.options['width']);
+			if (this.options.width)
+				this._display.dialog.setStyle('width', this.options.width);
 
 			// Adopt the content
 			if (this.options.content)
@@ -2929,8 +3315,10 @@ gx.bootstrap.Popup = new Class({
 			// Set the footer
 			if (typeOf(this.options.footer) == 'array')
 				this._display.footer.adopt(this.options.footer);
-			else
+			else if ( this.options.footer )
 				this._display.footer.adopt(__(this.options.footer));
+			else
+				this._display.footer.destroy();
 
 			// Set the title
 			this.setTitle(this.options.title);
@@ -2944,6 +3332,9 @@ gx.bootstrap.Popup = new Class({
 			} else {
 				this._display.cross.destroy();
 			}
+
+			if ( this.options.type )
+				this._display.header.addClass('text-' + this.options.type);
 
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->build', e.message); }
 	},
@@ -3039,8 +3430,103 @@ gx.bootstrap.Popup = new Class({
 			this.isOpen = false;
 			this.fireEvent('hide');
 		} catch(e) { gx.util.Console('gx.bootstrap.Popup->hide: ', e.message); }
+	},
+
+	destroy: function() {
+		this._display.modal.destroy();
+		this._display.backdrop.destroy();
+		delete this._display;
+
+		this.parent();
 	}
 });
+
+gx.bootstrap.PopupAlert = function(title, msg, options) {
+	if ( typeof options === 'string' )
+		options = {type: options};
+
+	options = Object.merge({
+		title: title,
+		content: msg,
+		width: 400,
+		destroyOnHide: true
+	}, options || {});
+
+	var okBtn = new Element('button', {
+		'html': 'Ok',
+		'class': 'btn btn-primary'
+	});
+
+	options.footer = okBtn;
+
+	var popup = new gx.bootstrap.Popup(options);
+	popup.show();
+
+	return new Promise(function(resolve, reject) {
+		okBtn.addEvent('click', function() {
+			if ( typeof options.onOk === 'function' )
+				if ( options.onOk() === false )
+					return;
+
+			popup.hide();
+			resolve();
+		});
+
+		okBtn.focus();
+	});
+};
+
+/*const*/ gx.bootstrap.PopupConfirmCanceled = {};
+
+gx.bootstrap.PopupConfirm = function(title, msg, options) {
+	if ( typeof options === 'string' )
+		options = {type: options};
+
+	options = Object.merge({
+		title: title,
+		content: msg,
+		width: 400,
+		destroyOnHide: true,
+		modal: true,
+		onOk: false,
+	}, options || {});
+
+	var okBtn = new Element('button', {
+		'html': 'Ok',
+		'class': 'btn btn-primary'
+	});
+
+	var cancelBtn = new Element('button', {
+		'html': 'Cancel',
+		'class': 'btn btn-default'
+	});
+
+	options.footer = [cancelBtn, okBtn];
+
+	var popup = new gx.bootstrap.Popup(options);
+	popup.show();
+
+	return new Promise(function(resolve, reject) {
+		cancelBtn.addEvent('click', function() {
+			popup.hide();
+			resolve(gx.bootstrap.PopupConfirmCanceled);
+		});
+
+		okBtn.addEvent('click', function() {
+			if ( typeof options.onOk === 'function' )
+				if ( options.onOk() === false )
+					return;
+
+			popup.hide();
+			resolve();
+		});
+
+		if ( document && document.activeElement && typeof document.activeElement.blur === 'function' ) {
+			document.activeElement.blur();
+		}
+
+	});
+};
 /**
  * @class gx.bootstrap.Select
  * @description Creates a dynamic select box, which dynamically loads the contents from a remote URL
@@ -3249,6 +3735,10 @@ gx.bootstrap.Select = new Class({
 	 */
 	set: function (selection, noEvents) {
 		this._selected = selection;
+
+		// This conforms to vanilla js reading value like input.value.
+		this.value = this.getId();
+
 		return this.update(noEvents != false);
 	},
 
@@ -3263,14 +3753,18 @@ gx.bootstrap.Select = new Class({
 		if (noEvents == null || !noEvents)
 			this.fireEvent(this._selected == null ? 'noselect' : 'select', this._selected);
 
-        this._display.textbox.set('placeholder', this.showSelection(this._selected));
+		this.showSelection(this._selected);
 		this.hide();
 
 		return this;
 	},
 
-	showSelection: function(selection) {
-        return selection == null ? '('+this.getMessage('noSelection')+')' : selection[this.options.elementSelect];
+	showSelection: function() {
+		this._display.textbox.set('value', this.getSelectionDisplayValue());
+	},
+
+	getSelectionDisplayValue: function() {
+		return this._selected == null ? '' : this._selected[this.options.elementSelect];
 	},
 
 	/**
@@ -3334,7 +3828,6 @@ gx.bootstrap.Select = new Class({
 					continue;
 
 				var li = new Element('li');
-				var contents = this.getLink(list[i]);
 				var a = this.getLink(list[i]);
 
 				li.store('data', list[i]);
@@ -3452,6 +3945,10 @@ gx.bootstrap.Select = new Class({
 	disable: function () {
 		this._display.textbox.set('disabled', true);
 		return this;
+	},
+
+	toElement: function() {
+		return this._display.root;
 	}
 });
 
@@ -3520,7 +4017,7 @@ gx.bootstrap.SelectFilter = new Class({
 		'height'      : '200px',
 		'searchfields': ['name']
 	},
-	_lastSearch: '',
+	_lastSearch: null,
 
 	initialize: function (display, options) {
 		var root = this;
@@ -3549,6 +4046,10 @@ gx.bootstrap.SelectFilter = new Class({
 		try {
 			var query = this._display.textbox.get('value');
 			if (this._lastSearch == query)
+				return;
+
+			var selectionDisplayValue = this.getSelectionDisplayValue();
+			if ( this._selected && query == selectionDisplayValue )
 				return;
 
 			this.clearCursor();
@@ -3651,7 +4152,8 @@ gx.bootstrap.SelectDyn = new Class({
 		'method': 'GET',
 		'queryParam': 'query',
 		'parseDefault': false,
-		'requestData': {}
+		'requestData': {},
+		'requestHeader': {},
 	},
 	_requestChain:[],
 	_firstLoad: false,
@@ -3698,6 +4200,7 @@ gx.bootstrap.SelectDyn = new Class({
 			'method'   : this.options.method,
 			'url'      : this.options.url,
 			'data'     : this.getRequetData(query, Object.clone(this.options.requestData)),
+			'header'   : this.options.requestHeader,
 			'onRequest': function() {
 				this.showLoader();
 			}.bind(this),
@@ -3720,6 +4223,88 @@ gx.bootstrap.SelectDyn = new Class({
 
 		if (this._requestChain.length == 1)
 			r.send();
+	}
+});
+
+
+gx.bootstrap.SelectDynREST = new Class({
+	gx: 'gx.bootstrap.SelectDyn',
+	Extends: gx.bootstrap.SelectFilter,
+	options: {
+		'entity': '',
+		'requestData': {},
+		'limit': 50,
+	},
+	_requestChain:[],
+	_firstLoad: false,
+
+	data: null,
+
+	initialize: function (display, options) {
+		if (options.onRequestSuccess == null)
+			this.options.parseDefault = true;
+
+
+		this.addEvent('show', function() {
+			if (this._firstLoad)
+				return;
+
+			this.search();
+			this._firstLoad = true;
+		}.bind(this));
+
+		this.parent(display, options);
+	},
+
+	_searchQuery: function(searchText) {
+		this.showLoader();
+
+		gx.zeyosREST.Factory.getRESTmodel()
+			.listQuery(this.options.entity)
+			.limit(this.options.limit)
+			.search(searchText)
+			.run()
+			.then(function(res) {
+				this.hideLoader();
+				this.data = res.result;
+				this.setData(res.result);
+
+			}.bind(this))
+			.catch(function(e) {
+				this.hideLoader();
+				throw e;
+			}.bind(this));
+	},
+
+	setEntityId: function(id) {
+		var item;
+		if ( this.data ) {
+			item = this.data.findBy('ID', id);
+		}
+
+		if ( item ) {
+			this.set(item);
+			return Promise.resolve();
+		}
+
+		if ( !id )
+			return Promise.resolve();
+
+		this.showLoader();
+		return gx.zeyosREST.Factory.getRESTmodel()
+			.itemQuery(this.options.entity, id)
+			.run()
+			.then(function(res) {
+				this.hideLoader();
+				if ( res && typeOf(res.result) ) {
+					this.set(res.result);
+				}
+
+			}.bind(this))
+			.catch(function(e) {
+				this.hideLoader();
+				throw e;
+			}.bind(this));
 	}
 });
 
