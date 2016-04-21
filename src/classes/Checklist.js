@@ -45,31 +45,35 @@ gx.bootstrap.Checklist = new Class({
 		try {
 			this.parent(display, options);
 			this._display.frame = new Element('div', {'styles': {
-				'height': root.options.height+'px',
 				'overflow': 'auto'
 			}});
-			this._display.root.adopt(this._display.frame);
-			this._display.root.addClass('b');
+
+			if ( this.options.height )
+				this._display.frame.setStyle('height', this.options.height);
+
 			this._display.root.addClass('bs-checklist');
+
 			this._display.root.setStyle('width', root.options.width);
 			if (this.options.search) {
-				this._display.search = {
-					'box': new Element('div', {'class': 'b_b p2_t p2_r p2_l'}),
-					'txt': new Element('input', {'type': 'text', 'styles': {'width': (root.options.width - 50)+'px'}})
-				};
-				this._display.search.box.inject(this._display.root, 'top');
-				this._display.search.box.adopt(__({'class': 'bs-select input-prepend', 'children': [
-					{'tag': 'span', 'class': 'add-on', 'child': {'tag': 'i', 'class': 'icon-search'}},
-					this._display.search.txt
-				]}));
-				this._display.search.txt.addEvent('keyup', function() {
-					root.search(root._display.search.txt.value);
-				});
+				var searchInput = new Element('input', {'type': 'text', 'class': 'form-control'})
+					.addEvent('keyup', function(event) {
+						root.search(event.target.value);
+					});
+
+				this._display.root.adopt(new Element('div', {'class': 'form-group input-group'}).adopt(
+					new Element('span', {'class': 'input-group-addon'}).adopt(new Element('i', {'class': 'glyphicon glyphicon-search'})),
+					searchInput
+				));
 			}
-			this._display.table = new Element('table', {'class': 'table table-striped'}).setStyle('margin-bottom', '0px');
+
+			this._display.root.adopt(this._display.frame);
+
+			var table = new Element('table', {'class': 'table table-striped'}).setStyle('margin-bottom', '0px');
+			this._display.tbody = new Element('tbody');
 			if (this.options.onClick)
-				this._display.table.addEvent('click', this.options.onClick);
-			this._display.frame.adopt(this._display.table);
+				table.addEvent('click', this.options.onClick);
+
+			this._display.frame.adopt(table.adopt(this._display.tbody));
 
 			if (this.options.url)
 				this.loadFromURL(this.options.url, this.options.requestData);
@@ -85,7 +89,7 @@ gx.bootstrap.Checklist = new Class({
 	 */
 	set: function(list) {
 		try {
-			this._display.table.empty();
+			this._display.tbody.empty();
 			if (list == null)
 				return;
 
@@ -105,25 +109,21 @@ gx.bootstrap.Checklist = new Class({
 			var elem = {
 				'label': (this.options.listFormat != null) ? this.options.listFormat(item) : item,
 				'value': ( this.options.getItemValue == null ? item.value : this.options.getItemValue(item) ),
-				'input': new Element('input', {'type': 'checkbox', 'value': item[this.options.listValue]})
-			}
+				'input': new gx.bootstrap.CheckButton()
+			};
 
 			//console.log('item: ' + JSON.encode(item) + ' format: ' + this.options.listFormat + ' label: ' + elem.label + ' value: ' + elem.value + ' input: ' + elem.input);
 
 			elem.row = new Element('tr');
-			var td1 = new Element('td', {'width': 18});
+			var td1 = new Element('td', {'width': 90});
 			td1.adopt(elem.input);
 			elem.row.adopt(td1);
 			var td2 = new Element('td', {'html': elem.label});
 			td2.addEvent('click', function() {
-				elem.input.checked = !elem.input.checked;
-				if ( elem.input.checked )
-					elem.row.addClass('active');
-				else
-					elem.row.removeClass('active');
+				elem.input.toggle();
 			});
 			elem.row.adopt(td2);
-			this._display.table.adopt(elem.row);
+			this._display.tbody.adopt(elem.row);
 			this._elems.push(elem);
 			this._bg = this._bg == '' ? ' bg' : '';
 		} catch(e) { gx.util.Console('gx.bootstrap.Checklist->addItem', e.message); }
@@ -153,7 +153,7 @@ gx.bootstrap.Checklist = new Class({
 	reset: function() {
 		try {
 			this._elems.each(function(elem) {
-				elem.input.checked = false;
+				elem.input.uncheck();
 			});
 		} catch(e) { gx.util.Console('gx.bootstrap.Checklist->reset', e.message); }
 	},
@@ -166,11 +166,7 @@ gx.bootstrap.Checklist = new Class({
 	setValues: function(values) {
 		try {
 			this._elems.each(function(elem) {
-				elem.input.checked = values.contains(elem.input.get('value'));
-				if ( elem.input.checked )
-					elem.row.addClass('active');
-				else
-					elem.row.removeClass('active');
+				elem.input.set(values.contains(elem.value));
 			});
 			return values;
 		} catch(e) {
@@ -188,7 +184,7 @@ gx.bootstrap.Checklist = new Class({
 		try {
 			var values = [];
 			this._elems.each(function(elem) {
-				if (elem.input.checked) {
+				if (elem.input.get()) {
 					if (key == null)
 						values.push(elem.value);
 					else if (elem.value[key] != null)
@@ -213,7 +209,7 @@ gx.bootstrap.Checklist = new Class({
 		try {
 			this._elems = [];
 			this._bg = '';
-			this._display.table.empty();
+			this._display.tbody.empty();
 
 			if (url == null) url = root.options.url;
 			if (data == null) data = root.options.requestData;
