@@ -209,31 +209,35 @@ gx.bootstrap.Checklist = new Class({
 		try {
 			this.parent(display, options);
 			this._display.frame = new Element('div', {'styles': {
-				'height': root.options.height+'px',
 				'overflow': 'auto'
 			}});
-			this._display.root.adopt(this._display.frame);
-			this._display.root.addClass('b');
+
+			if ( this.options.height )
+				this._display.frame.setStyle('height', this.options.height);
+
 			this._display.root.addClass('bs-checklist');
+
 			this._display.root.setStyle('width', root.options.width);
 			if (this.options.search) {
-				this._display.search = {
-					'box': new Element('div', {'class': 'b_b p2_t p2_r p2_l'}),
-					'txt': new Element('input', {'type': 'text', 'styles': {'width': (root.options.width - 50)+'px'}})
-				};
-				this._display.search.box.inject(this._display.root, 'top');
-				this._display.search.box.adopt(__({'class': 'bs-select input-prepend', 'children': [
-					{'tag': 'span', 'class': 'add-on', 'child': {'tag': 'i', 'class': 'icon-search'}},
-					this._display.search.txt
-				]}));
-				this._display.search.txt.addEvent('keyup', function() {
-					root.search(root._display.search.txt.value);
-				});
+				var searchInput = new Element('input', {'type': 'text', 'class': 'form-control'})
+					.addEvent('keyup', function(event) {
+						root.search(event.target.value);
+					});
+
+				this._display.root.adopt(new Element('div', {'class': 'form-group input-group'}).adopt(
+					new Element('span', {'class': 'input-group-addon'}).adopt(new Element('i', {'class': 'glyphicon glyphicon-search'})),
+					searchInput
+				));
 			}
-			this._display.table = new Element('table', {'class': 'table table-striped'}).setStyle('margin-bottom', '0px');
+
+			this._display.root.adopt(this._display.frame);
+
+			var table = new Element('table', {'class': 'table table-striped'}).setStyle('margin-bottom', '0px');
+			this._display.tbody = new Element('tbody');
 			if (this.options.onClick)
-				this._display.table.addEvent('click', this.options.onClick);
-			this._display.frame.adopt(this._display.table);
+				table.addEvent('click', this.options.onClick);
+
+			this._display.frame.adopt(table.adopt(this._display.tbody));
 
 			if (this.options.url)
 				this.loadFromURL(this.options.url, this.options.requestData);
@@ -249,7 +253,7 @@ gx.bootstrap.Checklist = new Class({
 	 */
 	set: function(list) {
 		try {
-			this._display.table.empty();
+			this._display.tbody.empty();
 			if (list == null)
 				return;
 
@@ -269,25 +273,21 @@ gx.bootstrap.Checklist = new Class({
 			var elem = {
 				'label': (this.options.listFormat != null) ? this.options.listFormat(item) : item,
 				'value': ( this.options.getItemValue == null ? item.value : this.options.getItemValue(item) ),
-				'input': new Element('input', {'type': 'checkbox', 'value': item[this.options.listValue]})
-			}
+				'input': new gx.bootstrap.CheckButton()
+			};
 
 			//console.log('item: ' + JSON.encode(item) + ' format: ' + this.options.listFormat + ' label: ' + elem.label + ' value: ' + elem.value + ' input: ' + elem.input);
 
 			elem.row = new Element('tr');
-			var td1 = new Element('td', {'width': 18});
+			var td1 = new Element('td', {'width': 90});
 			td1.adopt(elem.input);
 			elem.row.adopt(td1);
 			var td2 = new Element('td', {'html': elem.label});
 			td2.addEvent('click', function() {
-				elem.input.checked = !elem.input.checked;
-				if ( elem.input.checked )
-					elem.row.addClass('active');
-				else
-					elem.row.removeClass('active');
+				elem.input.toggle();
 			});
 			elem.row.adopt(td2);
-			this._display.table.adopt(elem.row);
+			this._display.tbody.adopt(elem.row);
 			this._elems.push(elem);
 			this._bg = this._bg == '' ? ' bg' : '';
 		} catch(e) { gx.util.Console('gx.bootstrap.Checklist->addItem', e.message); }
@@ -317,7 +317,7 @@ gx.bootstrap.Checklist = new Class({
 	reset: function() {
 		try {
 			this._elems.each(function(elem) {
-				elem.input.checked = false;
+				elem.input.uncheck();
 			});
 		} catch(e) { gx.util.Console('gx.bootstrap.Checklist->reset', e.message); }
 	},
@@ -330,11 +330,7 @@ gx.bootstrap.Checklist = new Class({
 	setValues: function(values) {
 		try {
 			this._elems.each(function(elem) {
-				elem.input.checked = values.contains(elem.input.get('value'));
-				if ( elem.input.checked )
-					elem.row.addClass('active');
-				else
-					elem.row.removeClass('active');
+				elem.input.set(values.contains(elem.value));
 			});
 			return values;
 		} catch(e) {
@@ -352,7 +348,7 @@ gx.bootstrap.Checklist = new Class({
 		try {
 			var values = [];
 			this._elems.each(function(elem) {
-				if (elem.input.checked) {
+				if (elem.input.get()) {
 					if (key == null)
 						values.push(elem.value);
 					else if (elem.value[key] != null)
@@ -377,7 +373,7 @@ gx.bootstrap.Checklist = new Class({
 		try {
 			this._elems = [];
 			this._bg = '';
-			this._display.table.empty();
+			this._display.tbody.empty();
 
 			if (url == null) url = root.options.url;
 			if (data == null) data = root.options.requestData;
@@ -2527,26 +2523,6 @@ Templates.register('formGroup', function(e, d) {
     control,
     arrSlice.call(arguments, 2)
   );
-});
-
-/**
- * Zeyos svg icon.
- */
-Templates.register('zeyosSvgIcon', function(e, d) {
-  var icon = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
-  icon.setAttribute('viewBox', '0 0 64 64');
-  var pathElement = document.createElementNS("http://www.w3.org/2000/svg", 'path');
-
-  var path;
-  if ( d === 'inventory' )
-    path = 'M51.5,6.1l-11.2,4.1,1.6,4.2-6,2.2-1.6-4.2-11.2,4.1c-0.9,0.3-1.3,1.2-1,2.1l10.3,28.3c0.3,0.9,1.2,1.3,2.1,1l11.2-4.1-1.6-4.2,6-2.2,1.6,4.2,11.2-4.1c0.9-0.3,1.3-1.2,1-2.1l-10.3-28.3c-0.3-0.9-1.2-1.4-2.1-1zm-14.4,49.9l-1.5-4,21.5-7.8,1.5,4-21.5,7.8zm-10.7-5.8c-3.7,1.4-5.6,5.4-4.2,9.1s5.4,5.6,9.1,4.2,5.6-5.4,4.2-9.1-5.4-5.5-9.1-4.2zm3.7,10.1c-1.9,0.7-3.9-0.3-4.7-2.1s0.3-3.9,2.1-4.7c1.9-0.7,3.9,0.3,4.7,2.1,0.8,1.9-0.2,4-2.1,4.7zm-29.4-54.8l-0.7,4.2,10,1.8,14,38.6,4.1-1.5-14.8-40.9-12.6-2.2z';
-  else if ( d === 'storage' )
-    path = 'M60.995,4h-57.99c-0.57419,0-1.0048,0.4306-1.0048,1.0048v57.99c0,0.57378,0.4306,1.0048,1.0048,1.0048h57.99c0.57379,0,1.0048-0.431,1.0048-1.005v-57.99c0.144-0.43058-0.287-1.0048-1.005-1.0048zm-1.005,2.1531v26.842h-55.837v-26.842h55.837zm-23.253,55.837h-9.4737v-20.526h9.4737v20.526zm2.1531,0v-21.531c0-0.57416-0.43064-1.0048-1.0048-1.0048h-11.627c-0.57415,0-1.0048,0.43062-1.0048,1.0048v21.53h-21.1v-26.842h55.837v26.842h-21.1zm-28.565-49.952,8.3254,0,0,14.354-8.3254,0zm17.368,0,8.3254,0,0,14.354-8.3254,0zm17.512,0,8.3254,0,0,14.354-8.3254,0zm0,28.421,8.3254,0,0,14.354-8.3254,0zm-34.88,0,8.3254,0,0,14.354-8.3254,0z';
-
-  pathElement.setAttribute('d', path);
-  icon.appendChild(pathElement);
-
-  return icon;
 });
 
 })();
